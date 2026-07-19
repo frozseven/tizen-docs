@@ -154,15 +154,38 @@ THUMBNAIL_STYLE_REFERENCE = (
 )
 
 
+MIN_OPEN_SECONDS = 15.0  # HOOK_STRUCTURE's four beats need this regardless of total runtime
+
+
 def script_sections(length_minutes: float) -> list[dict]:
     """SCRIPT_STRUCTURE's proportions scaled to a concrete runtime, as
-    explicit MM:SS boundaries a script prompt (or a human editor) can target."""
+    explicit MM:SS boundaries a script prompt (or a human editor) can target.
+
+    The open/hook section is floored at MIN_OPEN_SECONDS: below ~8.3 minutes
+    total, its raw 3% share falls under the 15 seconds HOOK_STRUCTURE's four
+    beats need, which would silently squeeze the hook on any shorter video.
+    The remaining sections split whatever runtime is left in their existing
+    proportions, so this is a no-op for videos long enough that the 3% share
+    already clears the floor on its own.
+    """
     total_seconds = length_minutes * 60
-    sections = []
-    elapsed = 0.0
-    for name, share, description in SCRIPT_STRUCTURE:
+    open_name, open_share, open_description = SCRIPT_STRUCTURE[0]
+    rest = SCRIPT_STRUCTURE[1:]
+    rest_weight_total = sum(share for _, share, _ in rest)
+
+    open_seconds = max(MIN_OPEN_SECONDS, open_share * total_seconds)
+    remaining_seconds = max(total_seconds - open_seconds, 0.0)
+
+    sections = [{
+        "name": open_name,
+        "start": _format_mmss(0),
+        "end": _format_mmss(open_seconds),
+        "description": open_description,
+    }]
+    elapsed = open_seconds
+    for name, share, description in rest:
         start = elapsed
-        elapsed += share * total_seconds
+        elapsed += remaining_seconds * (share / rest_weight_total)
         sections.append({
             "name": name,
             "start": _format_mmss(start),
