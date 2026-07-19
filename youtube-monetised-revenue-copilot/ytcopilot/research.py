@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from . import channel_profile as profile
 from . import youtube_data
 from .config import Settings
 
@@ -107,3 +108,46 @@ def recommend_posting_schedule(settings: Settings, niche: str, use_analytics: bo
         "top_countries_by_views": top_countries,
         "suggested_hour_windows": NICHE_POSTING_BENCHMARKS["default"],
     }
+
+
+def rollout_plan(months: int = 3) -> list[dict]:
+    """Spreads channel_profile.NICHE_CLUSTERS across `months` at roughly one new niche
+    introduced per week — gradual enough to stay clear of the "sudden topic pivot" risk
+    marker in content_authenticity.py, while still weighting heavy clusters (which pay
+    better and fit the channel's actual positioning) ahead of light ones.
+    """
+    heavy = [n for c in profile.NICHE_CLUSTERS.values() if c["weight"] == "heavy" for n in c["niches"]]
+    light = [n for c in profile.NICHE_CLUSTERS.values() if c["weight"] == "light" for n in c["niches"]]
+
+    ordered: list[tuple[str, str]] = []
+    hi = li = 0
+    while hi < len(heavy) or li < len(light):
+        for _ in range(2):
+            if hi < len(heavy):
+                ordered.append((heavy[hi], "heavy"))
+                hi += 1
+        if li < len(light):
+            ordered.append((light[li], "light"))
+            li += 1
+
+    weeks = max(months * 4, len(ordered))
+    plan = []
+    for i, (niche, weight) in enumerate(ordered):
+        week = 1 + (i * weeks) // len(ordered)
+        plan.append({"week": week, "niche": niche, "weight": weight})
+    return plan
+
+
+def format_rollout_markdown(plan: list[dict]) -> str:
+    lines = ["# Niche rollout plan", "", (
+        "One new niche roughly every 1-2 weeks, heavy clusters (income-machine, "
+        "compound-what-you-have) front-loaded ahead of light ones (escape-the-salary). "
+        "Keep this pace or slower — see `ytcopilot authenticity` for why."
+    ), ""]
+    by_week: dict[int, list[dict]] = {}
+    for item in plan:
+        by_week.setdefault(item["week"], []).append(item)
+    for week in sorted(by_week):
+        entries = ", ".join(f"{e['niche']} ({e['weight']})" for e in by_week[week])
+        lines.append(f"- **Week {week}:** {entries}")
+    return "\n".join(lines)

@@ -1,24 +1,45 @@
 # youtube-monetised-revenue-copilot
 
-A CLI that helps diagnose why a YouTube channel isn't monetized yet, and
-plans upcoming videos (script, titles, description, chapters, thumbnail)
-around what actually drives watch time and subscriber growth.
+A CLI for **The Wealth Sheikh** (`@The.Wealth.Sheikh`) that helps diagnose
+why the channel isn't earning much yet, and plans upcoming videos (script,
+titles, description, chapters, thumbnail) around what actually drives watch
+time and subscriber growth for this specific channel.
 
 ## What this is, and isn't
 
-This tool is grounded entirely in real data and real YouTube policy:
+This tool is grounded entirely in real data, real YouTube policy, and the
+channel owner's own research — not generic "growth hack" advice:
 
-- **Monetization diagnosis** checks your channel against YouTube Partner
+- **Monetization diagnosis** checks the channel against YouTube Partner
   Program's actual published thresholds (subscribers, watch hours / Shorts
   views), using the real YouTube Data API and, optionally, the YouTube
-  Analytics API for your own private watch-time data.
-- **Research and scheduling** use real search/trending data from the Data
-  API. Posting-time recommendations are clearly labeled as either your own
-  measured audience data (via Analytics API) or a general industry
-  benchmark — never presented as more certain than they are.
+  Analytics API for private watch-time data.
 - **Content generation** (scripts, titles, descriptions, chapters,
-  thumbnails) uses Claude (Anthropic API) and Gemini (Google AI, for the
-  actual thumbnail image).
+  thumbnails) is built on `ytcopilot/channel_profile.py` — the channel's
+  decoded formula (target audience, measured title patterns, hook
+  structure, script-structure timing, pacing/CTA rules) derived from
+  comparing real competitor titles/views/subscriber counts, including a
+  same-channel, same-format A/B that showed a 27x view difference from one
+  title-writing rule alone. It uses Claude (Anthropic API) for text and
+  Gemini (Google AI) for the actual thumbnail image.
+- **`ytcopilot authenticity`** checks upload practices against the pattern
+  YouTube's January 2026 "inauthentic content" policy update was enforced
+  against — sixteen faceless/AI channels with a combined 4.7B views
+  permanently terminated (not demonetized) for template sameness, no human
+  edit pass, high AI-script share, sudden topic pivots, and 10+/day uploads
+  on an identical format. This is the channel owner's own risk model built
+  from that pattern, not an official YouTube scoring system — but the
+  underlying event is real and directly relevant to an AI-generated,
+  faceless channel.
+- **`ytcopilot rollout`** spreads the channel's ten target niches (AI,
+  Automation, YouTube, Monetization, Investing, Productivity, Careers,
+  Personal Branding, Freelancing, Entrepreneurship) across 2-3 months
+  instead of all at once, weighted toward the higher-RPM clusters, to stay
+  clear of the "sudden topic pivot" risk marker above.
+- **Research and scheduling** use real search/trending data from the Data
+  API. Posting-time recommendations are clearly labeled as either the
+  channel's own measured audience data (via Analytics API) or a general
+  industry benchmark — never presented as more certain than they are.
 
 What it will **not** do, because no honest tool can:
 
@@ -59,25 +80,37 @@ Cloud APIs to enable.
 ytcopilot diagnose <channel> [--use-analytics] [--out report.md]
 ytcopilot research <niche> [--region US]
 ytcopilot schedule <niche> [--use-analytics]
-ytcopilot plan <topic> --niche "<niche>" [--length 10] [--out-dir output]
-ytcopilot thumbnail <topic> --niche "<niche>" --title "<title>" [--brief-only]
+ytcopilot rollout [--months 3]
+ytcopilot ideas
+ytcopilot authenticity [--uploads-per-day N] [--ai-script-percent N] \
+  [--human-edit-pass/--no-human-edit-pass] [--disclosure-on/--disclosure-off] \
+  [--template-rotation-count N] [--new-niches-this-month N] \
+  [--human-pov-stated/--no-human-pov-stated]
+ytcopilot plan <topic> [--niche "<niche>"] [--length 10] [--out-dir output]
+ytcopilot thumbnail <topic> --title "<title>" [--niche "<niche>"] [--brief-only]
 ytcopilot auth
 ```
 
-`plan` is the end-to-end command: it writes a full script, derives
-timestamped chapters from it, generates title options, writes an SEO
-description with the chapters embedded, and produces a thumbnail design
-brief plus a rendered PNG (skipped gracefully if `GEMINI_API_KEY` isn't
-set) — all saved under `output/<topic-slug>/`.
+`plan` is the end-to-end command: it writes a full script (using the decoded
+six-part structure and hook beats from `channel_profile.py`), derives
+timestamped chapters from it, generates title options tagged by which
+measured pattern they use, writes an SEO description with the chapters and
+brand line embedded, and produces a thumbnail design brief plus a rendered
+PNG (skipped gracefully if `GEMINI_API_KEY` isn't set) — all saved under
+`output/<topic-slug>/`. It also checks prior thumbnails under `output/` and
+tells the model what compositions/palettes to avoid repeating, and appends a
+reminder to do the human edit pass and run `ytcopilot authenticity` before
+uploading.
 
 ## Example
 
 ```
-ytcopilot diagnose @the.wealth.sheikh --use-analytics --out report.md
-ytcopilot research "personal finance" --region US
-ytcopilot schedule "personal finance" --use-analytics
-ytcopilot plan "3 signs your bank account is losing you money" \
-  --niche "personal finance" --length 8
+ytcopilot diagnose @The.Wealth.Sheikh --use-analytics --out report.md
+ytcopilot rollout --months 3
+ytcopilot ideas
+ytcopilot authenticity --uploads-per-day 2 --template-rotation-count 3
+ytcopilot plan "Why Can't You Just Work Harder to Get Rich?" \
+  --niche "AI/Automation" --length 9
 ```
 
 ## Tests

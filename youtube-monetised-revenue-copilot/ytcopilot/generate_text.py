@@ -3,7 +3,9 @@
 Every prompt here bakes in two hard constraints on purpose:
 1. Grounded in how YouTube's ranking and monetization systems actually work
    (retention-driven, not upload-volume-driven) rather than "growth hack"
-   folklore.
+   folklore — and, specifically, in the decoded formula in channel_profile.py,
+   which the channel owner built from real competitor titles/views/subscriber
+   data rather than generic advice.
 2. Titles/thumbnails must accurately represent the video. YouTube's
    clickbait / misleading-metadata policy (support.google.com/youtube/answer/2801973)
    can suppress reach or strike a channel for titles that promise something
@@ -17,9 +19,10 @@ import json
 
 from anthropic import Anthropic
 
+from . import channel_profile as profile
 from .config import Settings
 
-SYSTEM_PROMPT = """You are a YouTube content strategist. Hard rules, no exceptions:
+SYSTEM_PROMPT = f"""You are the scriptwriter for {profile.CHANNEL_NAME}. Hard rules, no exceptions:
 - Never suggest engagement-bait phrasing (e.g. fake urgency about "the algorithm", \
 begging/manipulative subscribe requests, "you won't believe" style false promises).
 - Titles and thumbnail text must accurately represent what the video actually delivers. \
@@ -27,7 +30,11 @@ High curiosity is good; misrepresentation is not — YouTube's misleading-metada
 can suppress or strike channels for it, which directly works against monetization.
 - Optimize for retention (average view duration/percentage), because YPP eligibility and \
 YouTube's own ranking system are both driven by watch time, not just clicks.
-- Write for a real human audience in the stated niche, not generic filler.
+- Channel positioning: {profile.POSITIONING}
+- Brand stance: "{profile.BRAND_LINE}" — this is a real editorial position, not a slogan to \
+paste in. Nothing you write should read like a "guru" pitch, a fake-urgency ad, or a \
+get-rich-quick claim, even implicitly.
+- Target viewer: {profile.TARGET_AUDIENCE}
 """
 
 
@@ -46,52 +53,73 @@ def _generate(settings: Settings, user_prompt: str, max_tokens: int = 4096) -> s
     return "".join(block.text for block in resp.content if block.type == "text")
 
 
-def generate_script(settings: Settings, topic: str, niche: str, length_minutes: int) -> str:
-    prompt = f"""Write a full YouTube video script for a "{niche}" channel.
+def generate_script(settings: Settings, topic: str, length_minutes: int, niche: str = "") -> str:
+    sections = profile.script_sections(length_minutes)
+    section_lines = "\n".join(
+        f"- [{s['name'].upper()} {s['start']}-{s['end']}] {s['description']}"
+        for s in sections
+    )
+    hook_lines = "\n".join(f"- {window}: {beat}" for window, beat in profile.HOOK_STRUCTURE)
+
+    prompt = f"""Write a full YouTube video script.
 
 Topic: {topic}
+{"Niche/topic cluster: " + niche if niche else ""}
 Target length: ~{length_minutes} minutes spoken (~{length_minutes * 150} words at ~150wpm)
 
-Structure requirements:
-- 0:00-0:15 hook: state the specific payoff/stakes immediately, no throat-clearing intro, \
-no channel-name preamble.
-- A clear promise of what the viewer will know/be able to do by the end, stated in the hook.
-- A re-hook (pattern interrupt / new open loop) roughly every 90-120 seconds to defend against \
-mid-video drop-off — this is the single biggest lever on watch-hours toward monetization.
-- Section breaks marked as "[SECTION: <short label>]" so they can be converted into chapter \
-timestamps later.
-- One natural, non-begging call-to-subscribe placed after the strongest value moment (not at \
-the very start or as a generic outro tack-on).
-- End on a specific next-step or a forward-reference to a follow-up video (retention/session \
-signal), not a generic "thanks for watching."
+Use this exact six-part structure, scaled to the runtime above. Mark each section inline as \
+"[SECTION: <NAME> <start>-<end>]" using precisely these timestamps, so they can be lifted \
+directly into chapters later:
+{section_lines}
 
-Output just the script text with [SECTION: ...] markers inline."""
+The OPEN section follows this exact four-beat hook structure — this is measured, not a \
+guess: a same-channel, same-format video hit 950,200 views with a title/hook that named the \
+viewer's feeling directly, versus 34,900 views for one that assumed a term the viewer didn't \
+already know. Land the open on landing the feeling, not the term:
+{hook_lines}
+
+Pacing: {profile.PACING_RULES}
+
+Call to action: {profile.CTA_RULE}
+
+Other requirements:
+- No stage directions, no "[music]" or "[visual: ...]" cues — narration text only.
+- No filler opener ("Hey guys, welcome back") — start directly on the hook.
+- One clean narration block per section, short natural sentences.
+
+Output just the script text with the [SECTION: ...] markers inline."""
     return _generate(settings, prompt, max_tokens=8192)
 
 
-def generate_titles(settings: Settings, topic: str, niche: str, script_excerpt: str = "", n: int = 8) -> list[str]:
-    prompt = f"""Generate {n} YouTube title options for this "{niche}" video.
+def generate_titles(settings: Settings, topic: str, script_excerpt: str = "", n: int = 8, niche: str = "") -> list[str]:
+    patterns_block = "\n".join(f"- {p['name']}: e.g. \"{p['example']}\"" for p in profile.TITLE_PATTERNS)
+    prompt = f"""Generate {n} YouTube title options for this video.
 
 Topic: {topic}
+{"Niche/topic cluster: " + niche if niche else ""}
 {"Script excerpt for grounding (titles must accurately reflect this content): " + script_excerpt[:1500] if script_excerpt else ""}
 
-Constraints:
+Draw from these measured title patterns — cover as many distinct patterns as you have options \
+for, don't repeat the same one twice if you can avoid it:
+{patterns_block}
+
+Hard rule: {profile.TITLE_RULE}
+
+Other constraints:
 - Under 60 characters where possible (avoids truncation on mobile).
-- High curiosity/specificity (numbers, concrete outcomes, contrast) but must be 100% honest \
-about what the video delivers — no bait.
-- Vary the angle across the {n} options (e.g. curiosity gap, direct benefit, contrarian take, \
-specific number/result, question).
+- Must be 100% honest about what the video delivers — no bait.
 
 Return ONLY a JSON array of {n} strings, nothing else."""
     raw = _generate(settings, prompt, max_tokens=1024)
     return _safe_json_list(raw)
 
 
-def generate_description(settings: Settings, topic: str, niche: str, chapters: list[dict], script_excerpt: str = "") -> str:
+def generate_description(settings: Settings, topic: str, chapters: list[dict], script_excerpt: str = "", niche: str = "") -> str:
     chapters_block = "\n".join(f"{c['timestamp']} {c['label']}" for c in chapters)
-    prompt = f"""Write a YouTube video description for this "{niche}" video.
+    prompt = f"""Write a YouTube video description for this video.
 
 Topic: {topic}
+{"Niche/topic cluster: " + niche if niche else ""}
 {"Script excerpt for grounding: " + script_excerpt[:1500] if script_excerpt else ""}
 
 Requirements:
@@ -101,7 +129,9 @@ keyword naturally — this is what shows in search results.
 secondary keywords for search (no keyword stuffing).
 - Include this exact chapters block verbatim, unmodified, at the point you'd naturally place it:
 {chapters_block}
+- Include this exact line verbatim, on its own, near the end: "{profile.BRAND_LINE}"
 - End with a short, honest CTA (subscribe/next video) — no manipulative language.
+- Add 3-5 relevant hashtags on the final line.
 - Do NOT invent links, sponsors, or affiliate disclosures that weren't provided.
 
 Output just the description text."""
@@ -109,18 +139,22 @@ Output just the description text."""
 
 
 def generate_chapters(settings: Settings, script_text: str, length_minutes: int) -> list[dict]:
-    prompt = f"""This script is marked with [SECTION: <label>] breakpoints and is meant to run \
-about {length_minutes} minutes total.
+    sections = profile.script_sections(length_minutes)
+    timestamps_block = "\n".join(f"- {s['name'].upper()}: starts at {s['start']}" for s in sections)
+    prompt = f"""This script is marked with [SECTION: <NAME> <start>-<end>] breakpoints.
 
 Script:
 {script_text}
 
-Convert the [SECTION: ...] markers into YouTube chapter timestamps. Distribute timestamps \
-proportionally across the {length_minutes}-minute runtime based on each section's approximate \
-share of the script's word count. The first chapter MUST be 0:00. Format each timestamp as \
-M:SS or H:MM:SS.
+The section start timestamps are fixed — do not change them:
+{timestamps_block}
 
-Return ONLY a JSON array of objects like {{"timestamp": "0:00", "label": "..."}}, nothing else."""
+Write a short, specific, non-generic chapter label for each section based on what that section \
+actually covers in the script (e.g. "The 37% bracket nobody explains" rather than "Mechanism"). \
+The first chapter MUST be 0:00.
+
+Return ONLY a JSON array of objects like {{"timestamp": "0:00", "label": "..."}}, one per \
+section, in order, nothing else."""
     raw = _generate(settings, prompt, max_tokens=1024)
     return _safe_json_objects(raw)
 

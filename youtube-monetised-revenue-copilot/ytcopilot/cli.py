@@ -7,7 +7,8 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from . import generate_text, generate_thumbnail, research, youtube_data
+from . import channel_profile as profile
+from . import content_authenticity, generate_text, generate_thumbnail, research, youtube_data
 from .config import MissingConfig, get_settings
 from .monetization import build_report, format_report_markdown
 
@@ -18,9 +19,26 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
 
 
+def _recent_thumbnail_styles(out_dir: Path, limit: int = 5) -> list[str]:
+    """Pulls composition/palette lines out of previously generated thumbnail
+    briefs so the next brief is told what to avoid repeating."""
+    styles = []
+    if not out_dir.exists():
+        return styles
+    for brief_path in sorted(out_dir.glob("*/thumbnail_brief.md"), key=lambda p: p.stat().st_mtime, reverse=True):
+        text = brief_path.read_text()
+        comp = next((l for l in text.splitlines() if l.startswith("**Composition:**")), "")
+        palette = next((l for l in text.splitlines() if l.startswith("**Color palette:**")), "")
+        if comp or palette:
+            styles.append(f"{comp} {palette}".strip())
+        if len(styles) >= limit:
+            break
+    return styles
+
+
 @click.group()
 def main():
-    """ytcopilot — YouTube monetization diagnosis and content-planning copilot."""
+    """ytcopilot — YouTube monetization diagnosis and content-planning copilot for The Wealth Sheikh."""
 
 
 @main.command()
@@ -94,8 +112,56 @@ def schedule(niche: str, use_analytics: bool):
 
 
 @main.command()
+@click.option("--months", default=3, type=int, help="Spread window in months.")
+def rollout(months: int):
+    """Suggest a gradual, week-by-week rollout schedule across the channel's niche clusters."""
+    plan = research.rollout_plan(months=months)
+    console.print(research.format_rollout_markdown(plan))
+
+
+@main.command()
+def ideas():
+    """List the channel's decoded-formula seed video ideas."""
+    console.print("[bold]Seed video ideas (from the decoded title/hook formula):[/]\n")
+    for i, idea in enumerate(profile.SEED_VIDEO_IDEAS, 1):
+        status = "[green]produced[/]" if idea["status"] == "produced" else "[yellow]idea[/]"
+        console.print(f"{i}. {idea['title']}")
+        console.print(f"   pattern: {idea['pattern']}  ·  {status}")
+
+
+@main.command()
+@click.option("--uploads-per-day", default=1.0, type=float)
+@click.option("--ai-script-percent", default=90, type=int)
+@click.option("--human-edit-pass/--no-human-edit-pass", default=True)
+@click.option("--disclosure-on/--disclosure-off", default=True)
+@click.option("--template-rotation-count", default=1, type=int, help="Distinct visual/script formats currently in rotation.")
+@click.option("--new-niches-this-month", default=0, type=int)
+@click.option("--human-pov-stated/--no-human-pov-stated", default=True)
+def authenticity(
+    uploads_per_day: float,
+    ai_script_percent: int,
+    human_edit_pass: bool,
+    disclosure_on: bool,
+    template_rotation_count: int,
+    new_niches_this_month: int,
+    human_pov_stated: bool,
+):
+    """Check current practices against the January-2026 'inauthentic content' termination-risk pattern."""
+    flags = content_authenticity.assess_authenticity_risk(
+        uploads_per_day=uploads_per_day,
+        ai_script_percent=ai_script_percent,
+        human_edit_pass=human_edit_pass,
+        disclosure_on=disclosure_on,
+        template_rotation_count=template_rotation_count,
+        new_niches_this_month=new_niches_this_month,
+        human_pov_stated=human_pov_stated,
+    )
+    console.print(content_authenticity.format_flags_markdown(flags))
+
+
+@main.command()
 @click.argument("topic")
-@click.option("--niche", required=True)
+@click.option("--niche", default="", help="Niche/topic cluster this video belongs to (optional context).")
 @click.option("--length", "length_minutes", default=10, type=int, help="Target length in minutes.")
 @click.option("--out-dir", type=click.Path(path_type=Path), default=Path("output"))
 def plan(topic: str, niche: str, length_minutes: int, out_dir: Path):
@@ -106,24 +172,33 @@ def plan(topic: str, niche: str, length_minutes: int, out_dir: Path):
     video_dir.mkdir(parents=True, exist_ok=True)
 
     console.print("[bold]1/5[/] Writing script...")
-    script = generate_text.generate_script(settings, topic, niche, length_minutes)
-    (video_dir / "script.md").write_text(script)
+    script = generate_text.generate_script(settings, topic, length_minutes, niche=niche)
+    script_with_reminder = script + (
+        "\n\n---\n"
+        "REMINDER before uploading (do not skip): do a real human edit pass on this script — "
+        "cut lines that don't sound like a specific person, add one thing that's genuinely "
+        "yours. Confirm the 'altered or synthetic content' disclosure toggle is on in Studio. "
+        "Run `ytcopilot authenticity` to check this upload against known termination-risk "
+        "markers before publishing.\n"
+    )
+    (video_dir / "script.md").write_text(script_with_reminder)
 
     console.print("[bold]2/5[/] Building chapters...")
     chapters = generate_text.generate_chapters(settings, script, length_minutes)
     (video_dir / "chapters.json").write_text(_json_pretty(chapters))
 
     console.print("[bold]3/5[/] Generating title options...")
-    titles = generate_text.generate_titles(settings, topic, niche, script_excerpt=script)
+    titles = generate_text.generate_titles(settings, topic, script_excerpt=script, niche=niche)
     (video_dir / "titles.md").write_text("\n".join(f"- {t}" for t in titles))
     chosen_title = titles[0]
 
     console.print("[bold]4/5[/] Writing description...")
-    description = generate_text.generate_description(settings, topic, niche, chapters, script_excerpt=script)
+    description = generate_text.generate_description(settings, topic, chapters, script_excerpt=script, niche=niche)
     (video_dir / "description.md").write_text(description)
 
     console.print("[bold]5/5[/] Designing thumbnail...")
-    brief = generate_thumbnail.generate_brief(settings, topic, niche, chosen_title)
+    recent_styles = _recent_thumbnail_styles(out_dir)
+    brief = generate_thumbnail.generate_brief(settings, topic, chosen_title, niche=niche, recent_styles=recent_styles)
     (video_dir / "thumbnail_brief.md").write_text(generate_thumbnail.format_brief_markdown(brief))
     try:
         settings.require_gemini_key()
@@ -134,18 +209,21 @@ def plan(topic: str, niche: str, length_minutes: int, out_dir: Path):
 
     console.print(f"\n[green]Done.[/] All assets in {video_dir}/")
     console.print(f"Top title pick: [bold]{chosen_title}[/] (see titles.md for all options)")
+    console.print("[yellow]Do the human edit pass before uploading — see the note at the end of script.md.[/]")
 
 
 @main.command()
 @click.argument("topic")
-@click.option("--niche", required=True)
+@click.option("--niche", default="", help="Niche/topic cluster this video belongs to (optional context).")
 @click.option("--title", required=True)
 @click.option("--brief-only", is_flag=True, help="Skip image rendering even if GEMINI_API_KEY is set.")
 @click.option("--out", type=click.Path(path_type=Path), default=Path("thumbnail.png"))
-def thumbnail(topic: str, niche: str, title: str, brief_only: bool, out: Path):
+@click.option("--out-dir", type=click.Path(path_type=Path), default=Path("output"), help="Where to look for recent thumbnails to avoid repeating.")
+def thumbnail(topic: str, niche: str, title: str, brief_only: bool, out: Path, out_dir: Path):
     """Generate a standalone thumbnail brief (+ image, unless --brief-only) for one video."""
     settings = get_settings()
-    brief = generate_thumbnail.generate_brief(settings, topic, niche, title)
+    recent_styles = _recent_thumbnail_styles(out_dir)
+    brief = generate_thumbnail.generate_brief(settings, topic, title, niche=niche, recent_styles=recent_styles)
     console.print(generate_thumbnail.format_brief_markdown(brief))
     if not brief_only:
         try:

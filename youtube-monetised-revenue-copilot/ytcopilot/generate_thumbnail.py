@@ -8,6 +8,13 @@ legible 2-4 word text overlay that adds information the title doesn't
 already say, and an accurate representation of the video's actual content —
 misleading thumbnails are a documented cause of YouTube reach suppression
 and channel strikes, i.e. they work against monetization, not for it.
+
+One more constraint comes from the channel owner's own research: identical
+templates repeated across every upload ("template sameness") was flagged as
+the single biggest risk marker in a wave of January 2026 channel
+terminations for "inauthentic content" (see content_authenticity.py). The
+reference style in channel_profile.py is a real, working starting point —
+not a fixed template to reuse verbatim on every video.
 """
 
 from __future__ import annotations
@@ -18,6 +25,7 @@ from pathlib import Path
 
 from anthropic import Anthropic
 
+from . import channel_profile as profile
 from .config import Settings
 
 BRIEF_SYSTEM_PROMPT = """You are a YouTube thumbnail designer. Rules:
@@ -47,13 +55,34 @@ def _client(settings: Settings) -> Anthropic:
     return Anthropic(api_key=settings.require_anthropic_key())
 
 
-def generate_brief(settings: Settings, topic: str, niche: str, title: str) -> ThumbnailBrief:
+def generate_brief(
+    settings: Settings,
+    topic: str,
+    title: str,
+    niche: str = "",
+    recent_styles: list[str] | None = None,
+) -> ThumbnailBrief:
     client = _client(settings)
+    recent_styles = recent_styles or []
+    avoid_block = (
+        "Recent thumbnails already used these compositions/palettes — do not repeat them, "
+        "pick a genuinely different layout or color treatment this time:\n"
+        + "\n".join(f"- {s}" for s in recent_styles)
+        if recent_styles
+        else "No prior thumbnails recorded yet — you may use the reference style below as a "
+        "starting point for this first one."
+    )
     prompt = f"""Design a YouTube thumbnail for this video.
 
-Niche: {niche}
+{"Niche/topic cluster: " + niche if niche else ""}
 Video title: {title}
 Topic/what the video actually covers: {topic}
+
+Reference style that has worked for this channel before (a real starting point, not a template \
+to copy on every video — see note above about template sameness):
+{profile.THUMBNAIL_STYLE_REFERENCE}
+
+{avoid_block}
 
 Return ONLY a JSON object with these exact keys:
 {{
@@ -66,7 +95,7 @@ Return ONLY a JSON object with these exact keys:
   "image_prompt": "a complete, self-contained text-to-image prompt combining all of the above \
 into one paragraph, written for an image generation model, including the exact text_overlay \
 string as rendered text in the image, 16:9 aspect ratio, photorealistic or bold-illustration \
-style as appropriate for a {niche} channel"
+style as appropriate for this channel"
 }}"""
     resp = client.messages.create(
         model=settings.anthropic_model,
