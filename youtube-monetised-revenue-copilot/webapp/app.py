@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,6 +16,12 @@ from ytcopilot.monetization import build_report, format_report_markdown
 
 from . import jobs
 from .auth import auth_is_configured, require_auth
+
+# So /static/manifest.webmanifest (served by StaticFiles below, which is not
+# behind Basic Auth) gets the right Content-Type — browsers' PWA-installability
+# check fetches this in the background and needs it recognized as a manifest,
+# not application/octet-stream.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = Path("output")
@@ -36,11 +43,6 @@ async def _lifespan(app: FastAPI):
 app = FastAPI(title="ytcopilot dashboard", dependencies=[Depends(require_auth)], lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
-
-
-@app.get("/manifest.webmanifest", include_in_schema=False)
-def manifest():
-    return FileResponse(BASE_DIR / "static" / "manifest.webmanifest", media_type="application/manifest+json")
 
 
 def render(request: Request, template: str, active: str, **context):
