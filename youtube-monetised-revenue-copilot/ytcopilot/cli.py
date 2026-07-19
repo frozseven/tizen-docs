@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
@@ -8,32 +7,11 @@ import click
 from rich.console import Console
 
 from . import channel_profile as profile
-from . import content_authenticity, generate_text, generate_thumbnail, research, youtube_data
+from . import content_authenticity, generate_thumbnail, pipeline, research, youtube_data
 from .config import MissingConfig, get_settings
 from .monetization import build_report, format_report_markdown
 
 console = Console()
-
-
-def _slug(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
-
-
-def _recent_thumbnail_styles(out_dir: Path, limit: int = 5) -> list[str]:
-    """Pulls composition/palette lines out of previously generated thumbnail
-    briefs so the next brief is told what to avoid repeating."""
-    styles = []
-    if not out_dir.exists():
-        return styles
-    for brief_path in sorted(out_dir.glob("*/thumbnail_brief.md"), key=lambda p: p.stat().st_mtime, reverse=True):
-        text = brief_path.read_text()
-        comp = next((l for l in text.splitlines() if l.startswith("**Composition:**")), "")
-        palette = next((l for l in text.splitlines() if l.startswith("**Color palette:**")), "")
-        if comp or palette:
-            styles.append(f"{comp} {palette}".strip())
-        if len(styles) >= limit:
-            break
-    return styles
 
 
 @click.group()
@@ -167,48 +145,20 @@ def authenticity(
 def plan(topic: str, niche: str, length_minutes: int, out_dir: Path):
     """Full pipeline for one video: script, chapters, titles, description, thumbnail brief+image."""
     settings = get_settings()
-    slug = _slug(topic)
-    video_dir = out_dir / slug
-    video_dir.mkdir(parents=True, exist_ok=True)
 
-    console.print("[bold]1/5[/] Writing script...")
-    script = generate_text.generate_script(settings, topic, length_minutes, niche=niche)
-    script_with_reminder = script + (
-        "\n\n---\n"
-        "REMINDER before uploading (do not skip): do a real human edit pass on this script — "
-        "cut lines that don't sound like a specific person, add one thing that's genuinely "
-        "yours. Confirm the 'altered or synthetic content' disclosure toggle is on in Studio. "
-        "Run `ytcopilot authenticity` to check this upload against known termination-risk "
-        "markers before publishing.\n"
-    )
-    (video_dir / "script.md").write_text(script_with_reminder)
+    def on_progress(index: int, name: str, status: str) -> None:
+        if status == "active":
+            console.print(f"[bold]{index + 1}/{len(pipeline.STEP_NAMES)}[/] {name}...")
 
-    console.print("[bold]2/5[/] Building chapters...")
-    chapters = generate_text.generate_chapters(settings, script, length_minutes)
-    (video_dir / "chapters.json").write_text(_json_pretty(chapters))
+    result = pipeline.run_plan_pipeline(settings, topic, niche, length_minutes, out_dir, on_progress=on_progress)
 
-    console.print("[bold]3/5[/] Generating title options...")
-    titles = generate_text.generate_titles(settings, topic, script_excerpt=script, niche=niche)
-    (video_dir / "titles.md").write_text("\n".join(f"- {t}" for t in titles))
-    chosen_title = titles[0]
+    if result["thumbnail_image_path"]:
+        console.print(f"  Thumbnail image saved to {result['thumbnail_image_path']}")
+    elif result["thumbnail_error"]:
+        console.print(f"  [yellow]Skipped image render:[/] {result['thumbnail_error']}")
 
-    console.print("[bold]4/5[/] Writing description...")
-    description = generate_text.generate_description(settings, topic, chapters, script_excerpt=script, niche=niche)
-    (video_dir / "description.md").write_text(description)
-
-    console.print("[bold]5/5[/] Designing thumbnail...")
-    recent_styles = _recent_thumbnail_styles(out_dir)
-    brief = generate_thumbnail.generate_brief(settings, topic, chosen_title, niche=niche, recent_styles=recent_styles)
-    (video_dir / "thumbnail_brief.md").write_text(generate_thumbnail.format_brief_markdown(brief))
-    try:
-        settings.require_gemini_key()
-        image_path = generate_thumbnail.render_thumbnail_image(settings, brief, video_dir / "thumbnail.png")
-        console.print(f"  Thumbnail image saved to {image_path}")
-    except MissingConfig as e:
-        console.print(f"  [yellow]Skipped image render:[/] {e}")
-
-    console.print(f"\n[green]Done.[/] All assets in {video_dir}/")
-    console.print(f"Top title pick: [bold]{chosen_title}[/] (see titles.md for all options)")
+    console.print(f"\n[green]Done.[/] All assets in {result['video_dir']}/")
+    console.print(f"Top title pick: [bold]{result['chosen_title']}[/] (see titles.md for all options)")
     console.print("[yellow]Do the human edit pass before uploading — see the note at the end of script.md.[/]")
 
 
@@ -222,7 +172,7 @@ def plan(topic: str, niche: str, length_minutes: int, out_dir: Path):
 def thumbnail(topic: str, niche: str, title: str, brief_only: bool, out: Path, out_dir: Path):
     """Generate a standalone thumbnail brief (+ image, unless --brief-only) for one video."""
     settings = get_settings()
-    recent_styles = _recent_thumbnail_styles(out_dir)
+    recent_styles = pipeline.recent_thumbnail_styles(out_dir)
     brief = generate_thumbnail.generate_brief(settings, topic, title, niche=niche, recent_styles=recent_styles)
     console.print(generate_thumbnail.format_brief_markdown(brief))
     if not brief_only:
@@ -231,11 +181,6 @@ def thumbnail(topic: str, niche: str, title: str, brief_only: bool, out: Path, o
             console.print(f"\n[green]Image saved to {path}[/]")
         except MissingConfig as e:
             console.print(f"\n[yellow]{e}[/]")
-
-
-def _json_pretty(obj) -> str:
-    import json
-    return json.dumps(obj, indent=2)
 
 
 def _entrypoint():

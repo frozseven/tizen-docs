@@ -1,9 +1,14 @@
 # youtube-monetised-revenue-copilot
 
-A CLI for **The Wealth Sheikh** (`@The.Wealth.Sheikh`) that helps diagnose
-why the channel isn't earning much yet, and plans upcoming videos (script,
-titles, description, chapters, thumbnail) around what actually drives watch
-time and subscriber growth for this specific channel.
+A CLI **and a web dashboard** for **The Wealth Sheikh** (`@The.Wealth.Sheikh`)
+that help diagnose why the channel isn't earning much yet, and plan upcoming
+videos (script, titles, description, chapters, thumbnail) around what
+actually drives watch time and subscriber growth for this specific channel.
+
+Both interfaces are thin layers over the same `ytcopilot` package — nothing
+is implemented twice. Use whichever fits: the CLI (`ytcopilot ...`) for
+quick/scriptable use, or the dashboard (`webapp/`) for a browser UI. See
+"Running the web dashboard" below.
 
 ## What this is, and isn't
 
@@ -112,6 +117,30 @@ ytcopilot authenticity --uploads-per-day 2 --template-rotation-count 3
 ytcopilot plan "Why Can't You Just Work Harder to Get Rich?" \
   --niche "AI/Automation" --length 9
 ```
+
+## Running the web dashboard
+
+```
+pip install -e ".[web]"
+uvicorn webapp.app:app --reload
+```
+
+Then open `http://localhost:8000`. Pages: Dashboard (config/auth status),
+Diagnose, Research, Schedule, Rollout, Ideas, Authenticity, and Plan a video
+(runs the same 5-step pipeline as `ytcopilot plan`, with live progress and
+generated assets/downloads on the page when done — it writes to the same
+`output/<topic-slug>/` folder the CLI uses).
+
+**Security note:** every dashboard action spends real API credits. If you
+run this anywhere reachable beyond your own machine, set `WEBAPP_USERNAME`
+and `WEBAPP_PASSWORD` in `.env` first — the app then requires HTTP Basic
+Auth on every request and prints a warning on startup if they're unset.
+Strictly local use (`http://localhost`) is fine without them.
+
+YouTube Analytics can be connected from the dashboard itself (Dashboard →
+"Connect YouTube Analytics") instead of running `ytcopilot auth` — same
+underlying OAuth client and token file, just a proper browser redirect flow
+instead of the CLI's local-server flow.
 
 ## Tests
 

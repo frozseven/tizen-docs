@@ -29,6 +29,14 @@ If your OAuth consent screen is in "Testing" mode, add your own Google
 account as a test user under APIs & Services > OAuth consent screen, or
 publish the app (fine for personal use).
 
+**If you'll use the web dashboard's "Connect YouTube Analytics" button**
+instead of (or in addition to) `ytcopilot auth`: same client ID/secret, but
+also add `http://localhost:8000/auth/callback` under that OAuth client's
+**Authorized redirect URIs**. Desktop-app clients accept any port/path on
+`localhost`, so this works without creating a separate "Web application"
+client — just make sure `WEBAPP_OAUTH_REDIRECT_URI` in `.env` matches
+whatever host/port you actually run the dashboard on.
+
 ## 3. Anthropic API key (required for script/title/description/thumbnail-brief generation)
 
 1. https://console.anthropic.com/settings/keys > Create key.
@@ -44,6 +52,15 @@ This is metered/paid per request once you start generating content.
 Without this, `ytcopilot thumbnail` and `ytcopilot plan` still produce a
 full design brief and a ready-to-paste image-generation prompt — you just
 won't get a rendered file automatically.
+
+## 5. Web dashboard auth (only if deploying beyond localhost)
+
+`pip install -e ".[web]"` for `fastapi`/`uvicorn`/`jinja2`. Then set
+`WEBAPP_USERNAME` and `WEBAPP_PASSWORD` in `.env` to any values you choose —
+these gate every dashboard route behind HTTP Basic Auth, since every action
+(script/title/thumbnail generation) spends real Anthropic/Gemini credits and
+an open, publicly reachable instance is a real cost risk, not just a privacy
+one. Leave both blank if you're only ever running it on your own machine.
 
 ## Notes on what's genuinely not checkable via API
 

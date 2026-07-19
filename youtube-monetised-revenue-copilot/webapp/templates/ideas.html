@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Ideas{% endblock %}
+{% block content %}
+<h2>Seed video ideas</h2>
+<p class="muted">From the decoded title/hook formula — see channel_profile.py.</p>
+{% for idea in ideas %}
+<div class="panel">
+  <strong>{{ loop.index }}. {{ idea.title }}</strong>
+  <span class="badge {{ idea.status }}">{{ idea.status }}</span>
+  <p class="muted">pattern: {{ idea.pattern }}</p>
+  {% if idea.status != 'produced' %}
+  <a class="btn" href="/plan?topic={{ idea.title | urlencode }}">Plan this video</a>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

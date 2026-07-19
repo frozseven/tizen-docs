@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}ytcopilot{% endblock %} — The Wealth Sheikh</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>ytcopilot — The Wealth Sheikh</h1>
+    <nav>
+      <a href="/" class="{{ 'active' if active == 'dashboard' else '' }}">Dashboard</a>
+      <a href="/diagnose" class="{{ 'active' if active == 'diagnose' else '' }}">Diagnose</a>
+      <a href="/research" class="{{ 'active' if active == 'research' else '' }}">Research</a>
+      <a href="/schedule" class="{{ 'active' if active == 'schedule' else '' }}">Schedule</a>
+      <a href="/rollout" class="{{ 'active' if active == 'rollout' else '' }}">Rollout</a>
+      <a href="/ideas" class="{{ 'active' if active == 'ideas' else '' }}">Ideas</a>
+      <a href="/authenticity" class="{{ 'active' if active == 'authenticity' else '' }}">Authenticity</a>
+      <a href="/plan" class="{{ 'active' if active == 'plan' else '' }}">Plan a video</a>
+    </nav>
+  </header>
+  <main>
+    {% if error %}<div class="panel flag high">{{ error }}</div>{% endif %}
+    {% if notice %}<div class="panel flag ok">{{ notice }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

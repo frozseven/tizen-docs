@@ -5,7 +5,7 @@ feature that needs them is actually invoked."""
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,14 +19,28 @@ class MissingConfig(RuntimeError):
 
 @dataclass(frozen=True)
 class Settings:
-    youtube_api_key: str | None = os.getenv("YOUTUBE_API_KEY")
-    oauth_client_id: str | None = os.getenv("YOUTUBE_OAUTH_CLIENT_ID")
-    oauth_client_secret: str | None = os.getenv("YOUTUBE_OAUTH_CLIENT_SECRET")
-    oauth_token_path: Path = Path(os.getenv("YOUTUBE_OAUTH_TOKEN_PATH", ".ytcopilot_token.json"))
-    anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
-    anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
-    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
-    gemini_image_model: str = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+    # default_factory (not a bare `= os.getenv(...)`) so each Settings() call
+    # re-reads the environment instead of freezing whatever os.environ held
+    # the moment this module was first imported — matters both for tests
+    # that set env vars per-case and for the web app, which stays in one
+    # long-lived process rather than the CLI's one-shot-per-invocation.
+    youtube_api_key: str | None = field(default_factory=lambda: os.getenv("YOUTUBE_API_KEY"))
+    oauth_client_id: str | None = field(default_factory=lambda: os.getenv("YOUTUBE_OAUTH_CLIENT_ID"))
+    oauth_client_secret: str | None = field(default_factory=lambda: os.getenv("YOUTUBE_OAUTH_CLIENT_SECRET"))
+    oauth_token_path: Path = field(
+        default_factory=lambda: Path(os.getenv("YOUTUBE_OAUTH_TOKEN_PATH", ".ytcopilot_token.json"))
+    )
+    anthropic_api_key: str | None = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY"))
+    anthropic_model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5"))
+    gemini_api_key: str | None = field(default_factory=lambda: os.getenv("GEMINI_API_KEY"))
+    gemini_image_model: str = field(
+        default_factory=lambda: os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+    )
+    webapp_username: str | None = field(default_factory=lambda: os.getenv("WEBAPP_USERNAME"))
+    webapp_password: str | None = field(default_factory=lambda: os.getenv("WEBAPP_PASSWORD"))
+    webapp_oauth_redirect_uri: str = field(
+        default_factory=lambda: os.getenv("WEBAPP_OAUTH_REDIRECT_URI", "http://localhost:8000/auth/callback")
+    )
 
     def require_youtube_api_key(self) -> str:
         if not self.youtube_api_key:

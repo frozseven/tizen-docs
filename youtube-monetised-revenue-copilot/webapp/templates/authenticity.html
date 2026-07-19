@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Authenticity check{% endblock %}
+{% block content %}
+<h2>Inauthentic-content risk check</h2>
+<p class="muted">Against the pattern that got 16 faceless/AI channels permanently terminated in January 2026. See content_authenticity.py for sourcing.</p>
+
+<div class="panel">
+  <form method="post" action="/authenticity">
+    <label for="uploads_per_day">Uploads per day</label>
+    <input type="number" step="0.1" id="uploads_per_day" name="uploads_per_day" value="{{ values.uploads_per_day if values else 1.0 }}">
+
+    <label for="ai_script_percent">AI-generated script share (%)</label>
+    <input type="number" id="ai_script_percent" name="ai_script_percent" value="{{ values.ai_script_percent if values else 90 }}">
+
+    <label><input type="checkbox" name="human_edit_pass" value="true" {{ 'checked' if (values.human_edit_pass if values else true) }}> Real human edit pass on every script</label>
+    <label><input type="checkbox" name="disclosure_on" value="true" {{ 'checked' if (values.disclosure_on if values else true) }}> "Altered or synthetic content" disclosure is on</label>
+
+    <label for="template_rotation_count">Distinct visual/script templates in rotation</label>
+    <input type="number" id="template_rotation_count" name="template_rotation_count" value="{{ values.template_rotation_count if values else 1 }}">
+
+    <label for="new_niches_this_month">New niches introduced this month</label>
+    <input type="number" id="new_niches_this_month" name="new_niches_this_month" value="{{ values.new_niches_this_month if values else 0 }}">
+
+    <label><input type="checkbox" name="human_pov_stated" value="true" {{ 'checked' if (values.human_pov_stated if values else true) }}> Channel has a clearly stated editorial stance</label>
+
+    <button type="submit">Check</button>
+  </form>
+</div>
+
+{% if flags %}
+<div class="panel">
+  {% for f in flags %}
+  <div class="flag {{ f.severity }}">
+    <strong>{{ f.marker }}</strong> — {{ f.detail }}
+    {% if f.mitigation %}<div class="muted">Do this: {{ f.mitigation }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Generating video{% endblock %}
+{% block content %}
+<h2>Generating...</h2>
+
+{% if not job %}
+<div class="panel flag high">
+  Job not found — the server may have restarted since you started this (jobs aren't saved across restarts).
+  <a href="/plan">Start a new one</a>.
+</div>
+{% else %}
+<div class="panel">
+  <div id="steps">
+    {% for s in job.steps %}
+    <div class="step {{ s.status }}" data-step="{{ loop.index0 }}">
+      {{ '✅' if s.status == 'done' else ('🛑' if s.status == 'error' else ('▶' if s.status == 'active' else '⬜')) }}
+      {{ s.name }}
+    </div>
+    {% endfor %}
+  </div>
+  <p id="job-status" class="muted">{{ job.status }}</p>
+</div>
+
+<div id="error-panel"></div>
+<div id="result-panel"></div>
+
+<script>
+const jobId = {{ job_id | tojson }};
+
+function renderError(msg) {
+  document.getElementById('error-panel').innerHTML =
+    '<div class="panel flag high"><pre>' + msg.replace(/</g, '&lt;') + '</pre></div>';
+}
+
+function renderResult(r) {
+  let html = '<div class="panel">';
+  html += '<h3>Top title pick</h3><p><strong>' + r.chosen_title.replace(/</g,'&lt;') + '</strong></p>';
+  html += '<h3>All title options</h3><ul>' + r.titles.map(t => '<li>' + t.replace(/</g,'&lt;') + '</li>').join('') + '</ul>';
+  html += '<h3>Chapters</h3><ul>' + r.chapters.map(c => '<li>' + c.timestamp + ' — ' + c.label.replace(/</g,'&lt;') + '</li>').join('') + '</ul>';
+  html += '<h3>Description</h3><pre>' + r.description.replace(/</g,'&lt;') + '</pre>';
+  html += '<h3>Script</h3><pre>' + r.script.replace(/</g,'&lt;') + '</pre>';
+  html += '<h3>Thumbnail brief</h3>';
+  html += '<p><strong>Composition:</strong> ' + r.thumbnail_brief.composition.replace(/</g,'&lt;') + '</p>';
+  html += '<p><strong>Text overlay:</strong> ' + r.thumbnail_brief.text_overlay.replace(/</g,'&lt;') + '</p>';
+  html += '<p><strong>Color palette:</strong> ' + r.thumbnail_brief.color_palette.replace(/</g,'&lt;') + '</p>';
+  if (r.has_thumbnail_image) {
+    html += '<img src="/plan/files/' + jobId + '/thumbnail.png" style="max-width:100%;border-radius:8px;border:1px solid #2a3038;">';
+  } else if (r.thumbnail_error) {
+    html += '<p class="muted">Thumbnail image skipped: ' + r.thumbnail_error.replace(/</g,'&lt;') + '</p>';
+  }
+  html += '<h3>Files</h3><p>';
+  ['script.md','chapters.json','titles.md','description.md','thumbnail_brief.md'].forEach(f => {
+    html += '<a class="btn" style="margin-right:0.5rem" href="/plan/files/' + jobId + '/' + f + '">' + f + '</a>';
+  });
+  html += '</p></div>';
+  document.getElementById('result-panel').innerHTML = html;
+}
+
+async function poll() {
+  const res = await fetch('/plan/status/' + jobId + '/json');
+  if (!res.ok) return;
+  const data = await res.json();
+  document.getElementById('job-status').textContent = data.status;
+  data.steps.forEach((s, i) => {
+    const el = document.querySelector('[data-step="' + i + '"]');
+    if (!el) return;
+    el.className = 'step ' + s.status;
+    const icon = s.status === 'done' ? '✅' : s.status === 'error' ? '🛑' : s.status === 'active' ? '▶' : '⬜';
+    el.textContent = icon + ' ' + s.name;
+  });
+  if (data.status === 'error') {
+    renderError(data.error || 'Unknown error.');
+    return;
+  }
+  if (data.status === 'done' && data.result) {
+    renderResult(data.result);
+    return;
+  }
+  setTimeout(poll, 2000);
+}
+poll();
+</script>
+{% endif %}
+{% endblock %}

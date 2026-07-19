@@ -1,0 +1,102 @@
+:root {
+  --bg: #0f1216;
+  --panel: #171b21;
+  --border: #2a3038;
+  --text: #e6e9ee;
+  --muted: #96a0ad;
+  --accent: #d4a24c;
+  --ok: #4caf7d;
+  --caution: #d4a24c;
+  --high: #d9534f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+header.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+header.topbar h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+header.topbar nav a {
+  color: var(--muted);
+  text-decoration: none;
+  margin-left: 1.25rem;
+  font-size: 0.9rem;
+}
+header.topbar nav a:hover, header.topbar nav a.active { color: var(--text); }
+
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+h2 { font-size: 1.4rem; margin-top: 0; }
+h3 { font-size: 1.05rem; color: var(--muted); font-weight: 600; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.75rem 0 0.25rem; }
+input[type=text], input[type=number], select {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: #0f1216;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+input[type=checkbox] { margin-right: 0.4rem; }
+
+button, .btn {
+  background: var(--accent);
+  color: #1a1400;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  display: inline-block;
+  text-decoration: none;
+}
+button:hover, .btn:hover { opacity: 0.9; }
+
+.flag { padding: 0.6rem 0.8rem; border-radius: 6px; margin-bottom: 0.5rem; border: 1px solid var(--border); }
+.flag.ok { border-left: 4px solid var(--ok); }
+.flag.caution { border-left: 4px solid var(--caution); }
+.flag.high { border-left: 4px solid var(--high); background: rgba(217, 83, 79, 0.08); }
+
+.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.75rem; }
+.badge.produced { background: rgba(76,175,125,0.2); color: var(--ok); }
+.badge.idea { background: rgba(212,162,76,0.2); color: var(--accent); }
+
+pre, code { white-space: pre-wrap; word-break: break-word; }
+pre { background: #0f1216; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; }
+
+.muted { color: var(--muted); font-size: 0.85rem; }
+.step { padding: 0.4rem 0; border-bottom: 1px dashed var(--border); }
+.step.done { color: var(--ok); }
+.step.active { color: var(--accent); }
+.step.pending { color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }

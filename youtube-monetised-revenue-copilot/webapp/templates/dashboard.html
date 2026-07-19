@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>{{ channel_name }} <span class="muted">{{ channel_handle }}</span></h2>
+
+<div class="panel">
+  <h3>Configuration</h3>
+  {% for label, ok in config_status.items() %}
+    <div class="flag {{ 'ok' if ok else 'caution' }}">
+      {{ '✅' if ok else '⬜' }} {{ label }}{{ '' if ok else ' — not configured' }}
+    </div>
+  {% endfor %}
+  {% if not config_status['YouTube Analytics (OAuth)'] %}
+    <a class="btn" href="/auth/start">Connect YouTube Analytics</a>
+  {% endif %}
+  <p class="muted">Missing keys go in your <code>.env</code> file — see <code>docs/SETUP.md</code>.</p>
+</div>
+
+<div class="panel">
+  <h3>What each page does</h3>
+  <table>
+    <tr><td><a href="/diagnose">Diagnose</a></td><td>Real YPP eligibility check against your channel's actual stats.</td></tr>
+    <tr><td><a href="/research">Research</a></td><td>Topic ideas and current trending videos for a niche.</td></tr>
+    <tr><td><a href="/schedule">Schedule</a></td><td>Posting-time recommendations (measured or benchmark, always labeled).</td></tr>
+    <tr><td><a href="/rollout">Rollout</a></td><td>Gradual niche-cluster rollout plan, to avoid the topic-pivot risk marker.</td></tr>
+    <tr><td><a href="/ideas">Ideas</a></td><td>The channel's decoded-formula seed video ideas.</td></tr>
+    <tr><td><a href="/authenticity">Authenticity</a></td><td>Check upload practices against the Jan-2026 termination risk pattern.</td></tr>
+    <tr><td><a href="/plan">Plan a video</a></td><td>Full pipeline: script, chapters, titles, description, thumbnail.</td></tr>
+  </table>
+</div>
+{% endblock %}
