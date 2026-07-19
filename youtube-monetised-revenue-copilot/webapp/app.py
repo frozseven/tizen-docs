@@ -45,6 +45,18 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
+@app.middleware("http")
+async def _allow_service_worker_root_scope(request: Request, call_next):
+    # sw.js lives under /static/, whose default max scope is /static/ itself —
+    # too narrow to control the actual app pages (/, /diagnose, ...), which is
+    # required for the browser to treat this as an installable PWA at all. This
+    # header is what lets base.html's register(..., {scope: "/"}) call succeed.
+    response = await call_next(request)
+    if request.url.path == "/static/sw.js":
+        response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
 def render(request: Request, template: str, active: str, **context):
     return templates.TemplateResponse(request, template, {"active": active, **context})
 
