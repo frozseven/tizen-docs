@@ -38,6 +38,11 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def manifest():
+    return FileResponse(BASE_DIR / "static" / "manifest.webmanifest", media_type="application/manifest+json")
+
+
 def render(request: Request, template: str, active: str, **context):
     return templates.TemplateResponse(request, template, {"active": active, **context})
 

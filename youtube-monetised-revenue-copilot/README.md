@@ -142,6 +142,14 @@ YouTube Analytics can be connected from the dashboard itself (Dashboard →
 underlying OAuth client and token file, just a proper browser redirect flow
 instead of the CLI's local-server flow.
 
+### Installing it as an app (mobile + desktop)
+
+The dashboard is a Progressive Web App — deployed somewhere reachable
+(not just `localhost`), it can be "installed" from the browser on your
+phone and your Windows laptop, giving it a real app icon and its own
+window. See `docs/DEPLOY.md` for the full walkthrough (deploying to
+Render's free tier, then installing on both devices).
+
 ## Tests
 
 ```
