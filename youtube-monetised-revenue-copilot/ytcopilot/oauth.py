@@ -49,12 +49,17 @@ def get_credentials(settings: Settings) -> Credentials:
     return creds
 
 
-def build_web_flow(settings: Settings, redirect_uri: str) -> Flow:
+def build_web_flow(settings: Settings, redirect_uri: str, *, code_verifier: str | None = None) -> Flow:
     """Authorization Code flow for the web dashboard's /auth/start + /auth/callback
     routes — separate from get_credentials' local-server flow used by `ytcopilot auth`.
-    Reuses the same Desktop-app OAuth client: Google's loopback exception allows any
-    http://localhost:<port>/<path> redirect URI for that client type, so no separate
-    "Web application" client is needed.
+    Needs a "Web application" type OAuth client (not the Desktop-app one used by
+    `ytcopilot auth`), since Google's loopback exception for arbitrary redirect URIs
+    only covers localhost, not a real hosted domain.
+
+    Google requires PKCE for this client type: /auth/start generates a code_verifier
+    (via autogenerate_code_verifier) and must hand it back in here on /auth/callback
+    so the token exchange uses the same one — a fresh Flow object with no verifier at
+    all produces "invalid_grant: Missing code verifier" from Google's token endpoint.
     """
     client_id, client_secret = settings.require_oauth_client()
     return Flow.from_client_config(
@@ -69,7 +74,25 @@ def build_web_flow(settings: Settings, redirect_uri: str) -> Flow:
         },
         scopes=SCOPES,
         redirect_uri=redirect_uri,
+        code_verifier=code_verifier,
+        autogenerate_code_verifier=code_verifier is None,
     )
+
+
+# In-memory store bridging /auth/start's generated code_verifier to /auth/callback,
+# keyed by the OAuth `state` param — the two routes build separate Flow objects
+# (one per request) so the verifier can't just live on a single Flow instance.
+_pending_code_verifiers: dict[str, str] = {}
+
+
+def store_code_verifier(state: str, code_verifier: str) -> None:
+    _pending_code_verifiers[state] = code_verifier
+
+
+def pop_code_verifier(state: str | None) -> str | None:
+    if not state:
+        return None
+    return _pending_code_verifiers.pop(state, None)
 
 
 def save_credentials(settings: Settings, creds: Credentials) -> None:

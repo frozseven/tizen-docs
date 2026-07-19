@@ -232,21 +232,23 @@ def auth_start():
         flow = oauth.build_web_flow(settings, settings.webapp_oauth_redirect_uri)
     except MissingConfig as e:
         return RedirectResponse(url=f"/?error={e}")
-    auth_url, _state = flow.authorization_url(
+    auth_url, state = flow.authorization_url(
         access_type="offline", prompt="consent", include_granted_scopes="true"
     )
+    oauth.store_code_verifier(state, flow.code_verifier)
     return RedirectResponse(auth_url)
 
 
 @app.get("/auth/callback")
-def auth_callback(code: str | None = None, error: str | None = None):
+def auth_callback(code: str | None = None, state: str | None = None, error: str | None = None):
     if error:
         return RedirectResponse(url=f"/?error={error}")
     if not code:
         return RedirectResponse(url="/?error=No authorization code returned by Google.")
     settings = get_settings()
     try:
-        flow = oauth.build_web_flow(settings, settings.webapp_oauth_redirect_uri)
+        code_verifier = oauth.pop_code_verifier(state)
+        flow = oauth.build_web_flow(settings, settings.webapp_oauth_redirect_uri, code_verifier=code_verifier)
         flow.fetch_token(code=code)
         oauth.save_credentials(settings, flow.credentials)
     except Exception as e:  # noqa: BLE001
