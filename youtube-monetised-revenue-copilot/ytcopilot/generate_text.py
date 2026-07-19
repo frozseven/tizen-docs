@@ -1,4 +1,4 @@
-"""Script / title / description / chapter generation via the Anthropic API.
+"""Script / title / description / chapter generation via the Gemini API.
 
 Every prompt here bakes in two hard constraints on purpose:
 1. Grounded in how YouTube's ranking and monetization systems actually work
@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import json
 
-from anthropic import Anthropic
+from google import genai
+from google.genai import types
 
 from . import channel_profile as profile
 from .config import Settings
@@ -38,19 +39,21 @@ get-rich-quick claim, even implicitly.
 """
 
 
-def _client(settings: Settings) -> Anthropic:
-    return Anthropic(api_key=settings.require_anthropic_key())
+def _client(settings: Settings) -> genai.Client:
+    return genai.Client(api_key=settings.require_gemini_key())
 
 
 def _generate(settings: Settings, user_prompt: str, max_tokens: int = 4096) -> str:
     client = _client(settings)
-    resp = client.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=max_tokens,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
+    resp = client.models.generate_content(
+        model=settings.gemini_text_model,
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            max_output_tokens=max_tokens,
+        ),
     )
-    return "".join(block.text for block in resp.content if block.type == "text")
+    return resp.text
 
 
 def generate_script(settings: Settings, topic: str, length_minutes: int, niche: str = "") -> str:

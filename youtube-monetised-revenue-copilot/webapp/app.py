@@ -48,8 +48,7 @@ def dashboard(request: Request):
     config_status = {
         "YouTube Data API": bool(settings.youtube_api_key),
         "YouTube Analytics (OAuth)": oauth.has_saved_credentials(settings),
-        "Anthropic (text generation)": bool(settings.anthropic_api_key),
-        "Gemini (thumbnail images)": bool(settings.gemini_api_key),
+        "Gemini (text + thumbnail images)": bool(settings.gemini_api_key),
     }
     return render(
         request, "dashboard.html", "dashboard",

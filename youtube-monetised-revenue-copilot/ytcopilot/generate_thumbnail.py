@@ -1,4 +1,4 @@
-"""Thumbnail generation: Claude writes a design brief grounded in what
+"""Thumbnail generation: Gemini writes a design brief grounded in what
 actually drives CTR without crossing into misleading territory, then Gemini
 (Nano Banana / Imagen) renders it to a real PNG.
 
@@ -23,7 +23,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from anthropic import Anthropic
+from google import genai
+from google.genai import types
 
 from . import channel_profile as profile
 from .config import Settings
@@ -51,8 +52,8 @@ class ThumbnailBrief:
     image_prompt: str
 
 
-def _client(settings: Settings) -> Anthropic:
-    return Anthropic(api_key=settings.require_anthropic_key())
+def _client(settings: Settings) -> genai.Client:
+    return genai.Client(api_key=settings.require_gemini_key())
 
 
 def generate_brief(
@@ -97,13 +98,15 @@ into one paragraph, written for an image generation model, including the exact t
 string as rendered text in the image, 16:9 aspect ratio, photorealistic or bold-illustration \
 style as appropriate for this channel"
 }}"""
-    resp = client.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=1024,
-        system=BRIEF_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
+    resp = client.models.generate_content(
+        model=settings.gemini_text_model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=BRIEF_SYSTEM_PROMPT,
+            max_output_tokens=1024,
+        ),
     )
-    raw = "".join(b.text for b in resp.content if b.type == "text").strip()
+    raw = resp.text.strip()
     start, end = raw.find("{"), raw.rfind("}")
     data = json.loads(raw[start:end + 1])
     return ThumbnailBrief(**data)

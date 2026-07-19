@@ -12,11 +12,11 @@ def test_settings_rereads_env_on_each_call(monkeypatch):
 
 
 def test_get_settings_reflects_unset_var(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    assert get_settings().anthropic_api_key is None
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    assert get_settings().gemini_api_key is None
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    assert get_settings().anthropic_api_key == "sk-test"
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    assert get_settings().gemini_api_key == "test-key"
 
 
 def test_webapp_auth_settings_default_none(monkeypatch):

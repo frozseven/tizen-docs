@@ -25,8 +25,8 @@ channel owner's own research — not generic "growth hack" advice:
   structure, script-structure timing, pacing/CTA rules) derived from
   comparing real competitor titles/views/subscriber counts, including a
   same-channel, same-format A/B that showed a 27x view difference from one
-  title-writing rule alone. It uses Claude (Anthropic API) for text and
-  Gemini (Google AI) for the actual thumbnail image.
+  title-writing rule alone. It uses Gemini (Google AI) for both the text
+  and the actual thumbnail image.
 - **`ytcopilot authenticity`** checks upload practices against the pattern
   YouTube's January 2026 "inauthentic content" policy update was enforced
   against — sixteen faceless/AI channels with a combined 4.7B views
@@ -70,9 +70,9 @@ What it will **not** do, because no honest tool can:
 1. `python3 -m venv .venv && source .venv/bin/activate`
 2. `pip install -e ".[dev]"`
 3. `cp .env.example .env` and fill in the keys you need (see `.env.example`
-   for where to get each one — all are free to obtain, though the Anthropic
-   and Gemini APIs are metered/paid per use once you start generating
-   content).
+   for where to get each one — all are free to obtain; the Gemini API has a
+   free tier with no credit card required, though heavy use can hit its
+   rate limits).
 4. For anything that needs `--use-analytics` (real watch-hour data, real
    posting-time data), run `ytcopilot auth` once.
 
@@ -101,7 +101,7 @@ six-part structure and hook beats from `channel_profile.py`), derives
 timestamped chapters from it, generates title options tagged by which
 measured pattern they use, writes an SEO description with the chapters and
 brand line embedded, and produces a thumbnail design brief plus a rendered
-PNG (skipped gracefully if `GEMINI_API_KEY` isn't set) — all saved under
+PNG — all via the Gemini API (`GEMINI_API_KEY` required), saved under
 `output/<topic-slug>/`. It also checks prior thumbnails under `output/` and
 tells the model what compositions/palettes to avoid repeating, and appends a
 reminder to do the human edit pass and run `ytcopilot authenticity` before

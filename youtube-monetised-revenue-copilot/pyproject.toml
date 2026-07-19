@@ -1,7 +1,7 @@
 [project]
 name = "ytcopilot"
 version = "0.1.0"
-description = "YouTube monetization diagnostic and content-planning copilot backed by real YouTube, Anthropic, and Gemini APIs."
+description = "YouTube monetization diagnostic and content-planning copilot backed by real YouTube and Gemini APIs."
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.1",
@@ -9,7 +9,6 @@ dependencies = [
     "google-auth>=2.29",
     "google-auth-oauthlib>=1.2",
     "google-auth-httplib2>=0.2",
-    "anthropic>=0.40",
     "google-genai>=0.3",
     "python-dotenv>=1.0",
     "rich>=13.7",

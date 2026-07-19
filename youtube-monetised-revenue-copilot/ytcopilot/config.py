@@ -30,9 +30,10 @@ class Settings:
     oauth_token_path: Path = field(
         default_factory=lambda: Path(os.getenv("YOUTUBE_OAUTH_TOKEN_PATH", ".ytcopilot_token.json"))
     )
-    anthropic_api_key: str | None = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY"))
-    anthropic_model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5"))
     gemini_api_key: str | None = field(default_factory=lambda: os.getenv("GEMINI_API_KEY"))
+    gemini_text_model: str = field(
+        default_factory=lambda: os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
+    )
     gemini_image_model: str = field(
         default_factory=lambda: os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
     )
@@ -61,20 +62,12 @@ class Settings:
             )
         return self.oauth_client_id, self.oauth_client_secret
 
-    def require_anthropic_key(self) -> str:
-        if not self.anthropic_api_key:
-            raise MissingConfig(
-                "ANTHROPIC_API_KEY is not set. Get one at "
-                "https://console.anthropic.com/settings/keys and add it to .env."
-            )
-        return self.anthropic_api_key
-
     def require_gemini_key(self) -> str:
         if not self.gemini_api_key:
             raise MissingConfig(
                 "GEMINI_API_KEY is not set. Get one at https://aistudio.google.com/apikey "
-                "and add it to .env. Without it, use `ytcopilot thumbnail --brief-only` "
-                "to still get a design brief and hand-off prompt with no image API needed."
+                "and add it to .env. Required for script/title/description/chapter/thumbnail-brief "
+                "generation and for rendering the thumbnail image."
             )
         return self.gemini_api_key
 

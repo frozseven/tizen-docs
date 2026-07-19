@@ -1,6 +1,6 @@
 """Optional HTTP Basic Auth for the whole app.
 
-Every dashboard action spends real Anthropic/Gemini/YouTube API credits, so
+Every dashboard action spends real Gemini/YouTube API quota, so
 an unauthenticated deploy reachable beyond localhost is a real cost risk,
 not just a privacy one. If WEBAPP_USERNAME and WEBAPP_PASSWORD are both set,
 every request must match them. If either is unset, the app runs open —

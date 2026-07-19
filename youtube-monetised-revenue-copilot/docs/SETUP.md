@@ -37,28 +37,23 @@ also add `http://localhost:8000/auth/callback` under that OAuth client's
 client — just make sure `WEBAPP_OAUTH_REDIRECT_URI` in `.env` matches
 whatever host/port you actually run the dashboard on.
 
-## 3. Anthropic API key (required for script/title/description/thumbnail-brief generation)
-
-1. https://console.anthropic.com/settings/keys > Create key.
-2. Put it in `.env` as `ANTHROPIC_API_KEY`.
-
-This is metered/paid per request once you start generating content.
-
-## 4. Gemini API key (optional, only for rendering actual thumbnail PNGs)
+## 3. Gemini API key (required for script/title/description/thumbnail generation)
 
 1. https://aistudio.google.com/apikey > Create key.
 2. Put it in `.env` as `GEMINI_API_KEY`.
 
-Without this, `ytcopilot thumbnail` and `ytcopilot plan` still produce a
-full design brief and a ready-to-paste image-generation prompt — you just
-won't get a rendered file automatically.
+This covers both text generation (script, titles, description, chapters,
+thumbnail design brief) and rendering the actual thumbnail PNG — one key,
+via `GEMINI_TEXT_MODEL` and `GEMINI_IMAGE_MODEL` in `.env`. Google AI Studio
+has a free tier that doesn't require a credit card to start; you'll only
+need to worry about billing if you exceed its rate limits.
 
-## 5. Web dashboard auth (only if deploying beyond localhost)
+## 4. Web dashboard auth (only if deploying beyond localhost)
 
 `pip install -e ".[web]"` for `fastapi`/`uvicorn`/`jinja2`. Then set
 `WEBAPP_USERNAME` and `WEBAPP_PASSWORD` in `.env` to any values you choose —
 these gate every dashboard route behind HTTP Basic Auth, since every action
-(script/title/thumbnail generation) spends real Anthropic/Gemini credits and
+(script/title/thumbnail generation) uses real Gemini API quota and
 an open, publicly reachable instance is a real cost risk, not just a privacy
 one. Leave both blank if you're only ever running it on your own machine.
 
