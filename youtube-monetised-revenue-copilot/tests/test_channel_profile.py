@@ -1,4 +1,11 @@
-from ytcopilot.channel_profile import MIN_OPEN_SECONDS, SCRIPT_STRUCTURE, script_sections
+from ytcopilot.channel_profile import (
+    MIN_OPEN_SECONDS,
+    SCRIPT_STRUCTURE,
+    SEED_VIDEO_IDEAS,
+    TITLE_PATTERNS,
+    script_sections,
+    title_patterns_used,
+)
 
 
 def test_script_structure_shares_sum_to_one():
@@ -50,3 +57,26 @@ def test_script_sections_never_produce_negative_or_out_of_order_boundaries():
 def _mmss_to_seconds(mmss: str) -> int:
     minutes, seconds = mmss.split(":")
     return int(minutes) * 60 + int(seconds)
+
+
+def test_title_patterns_used_resolves_single_pattern():
+    result = title_patterns_used("naive_question")
+    assert [p["name"] for p in result] == ["naive_question"]
+
+
+def test_title_patterns_used_resolves_multiple_patterns_in_order():
+    result = title_patterns_used("system_blame_frame + parenthetical_closer")
+    assert [p["name"] for p in result] == ["system_blame_frame", "parenthetical_closer"]
+
+
+def test_title_patterns_used_skips_unknown_pattern_names():
+    result = title_patterns_used("naive_question + not_a_real_pattern")
+    assert [p["name"] for p in result] == ["naive_question"]
+
+
+def test_every_seed_idea_pattern_resolves_to_at_least_one_known_pattern():
+    known_names = {p["name"] for p in TITLE_PATTERNS}
+    for idea in SEED_VIDEO_IDEAS:
+        resolved = title_patterns_used(idea["pattern"])
+        assert resolved, f"idea {idea['title']!r} pattern {idea['pattern']!r} matched nothing"
+        assert {p["name"] for p in resolved} <= known_names

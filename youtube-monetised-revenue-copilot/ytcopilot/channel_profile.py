@@ -154,6 +154,19 @@ THUMBNAIL_STYLE_REFERENCE = (
 )
 
 
+def title_patterns_used(pattern_field: str) -> list[dict]:
+    """Resolves a SEED_VIDEO_IDEAS `pattern` string like
+    "system_blame_frame + parenthetical_closer" into the matching
+    TITLE_PATTERNS entries, so callers can show *why* a title follows a
+    measured pattern (with the real example) — deliberately not a fabricated
+    performance score, since no title pattern can actually predict view
+    counts; see README's "What this is, and isn't."
+    """
+    by_name = {p["name"]: p for p in TITLE_PATTERNS}
+    names = [n.strip() for n in pattern_field.split("+")]
+    return [by_name[n] for n in names if n in by_name]
+
+
 MIN_OPEN_SECONDS = 15.0  # HOOK_STRUCTURE's four beats need this regardless of total runtime
 
 

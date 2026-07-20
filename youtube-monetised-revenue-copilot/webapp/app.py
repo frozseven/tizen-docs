@@ -155,7 +155,11 @@ def rollout_page(request: Request, months: int = 3):
 
 @app.get("/ideas", response_class=HTMLResponse)
 def ideas_page(request: Request):
-    return render(request, "ideas.html", "ideas", ideas=profile.SEED_VIDEO_IDEAS)
+    ideas_with_patterns = [
+        {**idea, "matched_patterns": profile.title_patterns_used(idea["pattern"])}
+        for idea in profile.SEED_VIDEO_IDEAS
+    ]
+    return render(request, "ideas.html", "ideas", ideas=ideas_with_patterns, title_rule=profile.TITLE_RULE)
 
 
 @app.get("/authenticity", response_class=HTMLResponse)

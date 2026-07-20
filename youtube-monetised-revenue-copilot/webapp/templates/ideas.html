@@ -2,12 +2,20 @@
 {% block title %}Ideas{% endblock %}
 {% block content %}
 <h2>Seed video ideas</h2>
-<p class="muted">From the decoded title/hook formula — see channel_profile.py.</p>
+<p class="muted">From the decoded title/hook formula — see channel_profile.py. No tool can predict
+view counts, so instead of a fake score, each idea below shows the real measured pattern it's
+built on and an actual example of that pattern working.</p>
 {% for idea in ideas %}
 <div class="panel">
   <strong>{{ loop.index }}. {{ idea.title }}</strong>
   <span class="badge {{ idea.status }}">{{ idea.status }}</span>
-  <p class="muted">pattern: {{ idea.pattern }}</p>
+  <div class="panel" style="margin-top: 0.5rem;">
+    <p class="muted" style="margin-bottom: 0.5rem;">Why this title follows a measured pattern:</p>
+    {% for p in idea.matched_patterns %}
+      <p><strong>{{ p.name | replace('_', ' ') | title }}</strong> — e.g. "{{ p.example }}"</p>
+    {% endfor %}
+    <p class="muted">Universal rule behind all of them: {{ title_rule }}</p>
+  </div>
   {% if idea.status != 'produced' %}
   <a class="btn" href="/plan?topic={{ idea.title | urlencode }}">Plan this video</a>
   {% endif %}
