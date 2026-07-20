@@ -13,7 +13,9 @@
   {% if not config_status['YouTube Analytics (OAuth)'] %}
     <a class="btn" href="/auth/start">Connect YouTube Analytics</a>
   {% endif %}
-  <p class="muted">Missing keys go in your <code>.env</code> file — see <code>docs/SETUP.md</code>.</p>
+  {% if not all_configured %}
+    <p class="muted">Missing keys go in your <code>.env</code> file — see <code>docs/SETUP.md</code>.</p>
+  {% endif %}
 </div>
 
 {% if refresh_token_to_persist %}

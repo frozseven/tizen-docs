@@ -80,6 +80,7 @@ def dashboard(request: Request):
         channel_name=profile.CHANNEL_NAME,
         channel_handle=profile.CHANNEL_HANDLE,
         config_status=config_status,
+        all_configured=all(config_status.values()),
         refresh_token_to_persist=refresh_token_to_persist,
         notice=request.query_params.get("notice"),
         error=request.query_params.get("error"),
