@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Diagnose{% endblock %}
+{% block content %}
+<h2>Diagnose monetization eligibility</h2>
+<div class="panel">
+  <form method="post" action="/diagnose">
+    <label for="channel">Channel (handle, URL, or channel ID)</label>
+    <input type="text" id="channel" name="channel" value="{{ channel or '@The.Wealth.Sheikh' }}" required>
+    <label><input type="checkbox" name="use_analytics" value="true" {{ 'checked' if use_analytics }}> Use real watch-hour/Shorts data (requires YouTube Analytics connected)</label>
+    <button type="submit">Diagnose</button>
+  </form>
+</div>
+
+{% if report_md %}
+<div class="panel">
+  <pre>{{ report_md }}</pre>
+</div>
+{% endif %}
+{% endblock %}

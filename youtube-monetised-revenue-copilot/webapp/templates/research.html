@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Research{% endblock %}
+{% block content %}
+<h2>Topic research</h2>
+<div class="panel">
+  <form method="get" action="/research">
+    <label for="niche">Niche / topic</label>
+    <input type="text" id="niche" name="niche" value="{{ niche }}" placeholder="e.g. personal finance" required>
+    <label for="region">Region</label>
+    <input type="text" id="region" name="region" value="{{ region }}">
+    <button type="submit">Search</button>
+  </form>
+</div>
+
+{% if topics is not none %}
+<div class="panel">
+  <h3>Top recent videos matching "{{ niche }}" ({{ region }})</h3>
+  <table>
+    {% for t in topics %}
+    <tr><td>{{ t.title }}</td><td class="muted">{{ t.channel_title }} · {{ t.published_at[:10] }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="panel">
+  <h3>Currently trending in this category ({{ region }})</h3>
+  <table>
+    {% for v in trending %}
+    <tr><td>{{ v.title }}</td><td class="muted">{{ "{:,}".format(v.view_count) }} views · {{ v.channel_title }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

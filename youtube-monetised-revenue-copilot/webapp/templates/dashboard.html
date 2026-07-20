@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>{{ channel_name }} <span class="muted">{{ channel_handle }}</span></h2>
+
+<div class="panel">
+  <h3>Configuration</h3>
+  {% for label, ok in config_status.items() %}
+    <div class="flag {{ 'ok' if ok else 'caution' }}">
+      {{ '✅' if ok else '⬜' }} {{ label }}{{ '' if ok else ' — not configured' }}
+    </div>
+  {% endfor %}
+  {% if not config_status['YouTube Analytics (OAuth)'] %}
+    <a class="btn" href="/auth/start">Connect YouTube Analytics</a>
+  {% endif %}
+  {% if not all_configured %}
+    <p class="muted">Missing keys go in your <code>.env</code> file — see <code>docs/SETUP.md</code>.</p>
+  {% endif %}
+</div>
+
+{% if refresh_token_to_persist %}
+<div class="panel flag caution">
+  <h3>Make this survive restarts (one-time)</h3>
+  <p>On a host with no persistent disk (e.g. Render's free tier), this connection
+  gets wiped every time the app restarts. Copy the value below into an environment
+  variable named <code>YOUTUBE_OAUTH_REFRESH_TOKEN</code> on your host, then redeploy
+  — after that, this box won't appear again and you won't need to reconnect.</p>
+  <p><strong>Treat this like a password</strong> — anyone with it can read this
+  channel's private Analytics data. Copy it straight into your host's environment
+  variable settings, not into a chat, note, or screenshot.</p>
+  <textarea readonly onclick="this.select()" rows="2" style="width:100%; font-family: monospace;">{{ refresh_token_to_persist }}</textarea>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>What each page does</h3>
+  <table>
+    <tr><td><a href="/diagnose">Diagnose</a></td><td>Real YPP eligibility check against your channel's actual stats.</td></tr>
+    <tr><td><a href="/research">Research</a></td><td>Topic ideas and current trending videos for a niche.</td></tr>
+    <tr><td><a href="/schedule">Schedule</a></td><td>Posting-time recommendations (measured or benchmark, always labeled).</td></tr>
+    <tr><td><a href="/rollout">Rollout</a></td><td>Gradual niche-cluster rollout plan, to avoid the topic-pivot risk marker.</td></tr>
+    <tr><td><a href="/ideas">Ideas</a></td><td>The channel's decoded-formula seed video ideas.</td></tr>
+    <tr><td><a href="/authenticity">Authenticity</a></td><td>Check upload practices against the Jan-2026 termination risk pattern.</td></tr>
+    <tr><td><a href="/plan">Plan a video</a></td><td>Full pipeline: script, chapters, titles, description, thumbnail.</td></tr>
+  </table>
+</div>
+{% endblock %}

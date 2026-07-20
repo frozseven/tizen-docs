@@ -1,0 +1,11 @@
+.env
+.ytcopilot_token.json
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+out/
+output/
+.venv/

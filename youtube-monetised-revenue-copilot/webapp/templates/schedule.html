@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Schedule{% endblock %}
+{% block content %}
+<h2>Posting-time recommendations</h2>
+<div class="panel">
+  <form method="get" action="/schedule">
+    <label for="niche">Niche / topic</label>
+    <input type="text" id="niche" name="niche" value="{{ niche }}" placeholder="e.g. personal finance" required>
+    <label><input type="checkbox" name="use_analytics" value="true" {{ 'checked' if use_analytics }}> Use real Analytics data (requires YouTube Analytics connected)</label>
+    <button type="submit">Get recommendation</button>
+  </form>
+</div>
+
+{% if rec %}
+<div class="panel">
+  <p><strong>Source:</strong> {{ rec.source }}</p>
+  <p class="muted">{{ rec.note }}</p>
+  {% if rec.source == 'analytics' %}
+    <p><strong>Your top days by views:</strong> {{ rec.top_days_by_views | join(', ') }}</p>
+    <p><strong>Your top countries by views:</strong> {{ rec.top_countries_by_views | join(', ') }}</p>
+    <h3>Suggested hour windows (benchmark, layer onto your top days)</h3>
+    <ul>{% for w in rec.suggested_hour_windows %}<li>{{ w }}</li>{% endfor %}</ul>
+  {% else %}
+    <h3>Suggested windows</h3>
+    <ul>{% for w in rec.windows %}<li>{{ w }}</li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
