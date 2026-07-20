@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = Path("output")
 
 # Whitelisted so /plan/files can't be used to read arbitrary paths.
-PLAN_FILES = {"script.md", "chapters.json", "titles.md", "description.md", "thumbnail_brief.md", "thumbnail.png"}
+PLAN_FILES = {"script.md", "chapters.json", "titles.md", "description.md", "video_prompts.md", "thumbnail_brief.md", "thumbnail.png"}
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
@@ -233,6 +233,7 @@ def plan_status_json(job_id: str):
             "script": job.result["script"],
             "description": job.result["description"],
             "chapters": job.result["chapters"],
+            "shot_list_count": len(job.result["shot_list"]),
             "thumbnail_brief": job.result["thumbnail_brief"].__dict__,
             "has_thumbnail_image": bool(job.result["thumbnail_image_path"]),
             "thumbnail_error": job.result["thumbnail_error"],

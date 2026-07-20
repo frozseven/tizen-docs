@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Callable
 
-from . import generate_text, generate_thumbnail
+from . import generate_text, generate_thumbnail, generate_video_prompts
 from .config import MissingConfig, Settings
 
 STEP_NAMES = [
@@ -20,6 +20,7 @@ STEP_NAMES = [
     "Building chapters",
     "Generating title options",
     "Writing description",
+    "Writing video-generation shot list",
     "Designing thumbnail",
 ]
 
@@ -95,6 +96,11 @@ def run_plan_pipeline(
     report(3, "done")
 
     report(4, "active")
+    shot_list = generate_video_prompts.generate_shot_list(settings, script, chapters, length_minutes)
+    (video_dir / "video_prompts.md").write_text(generate_video_prompts.format_shot_list_markdown(shot_list))
+    report(4, "done")
+
+    report(5, "active")
     recent_styles = recent_thumbnail_styles(out_dir)
     brief = generate_thumbnail.generate_brief(settings, topic, chosen_title, niche=niche, recent_styles=recent_styles)
     (video_dir / "thumbnail_brief.md").write_text(generate_thumbnail.format_brief_markdown(brief))
@@ -105,7 +111,7 @@ def run_plan_pipeline(
         thumbnail_image_path = generate_thumbnail.render_thumbnail_image(settings, brief, video_dir / "thumbnail.png")
     except MissingConfig as e:
         thumbnail_error = str(e)
-    report(4, "done")
+    report(5, "done")
 
     return {
         "video_dir": video_dir,
@@ -115,6 +121,7 @@ def run_plan_pipeline(
         "titles": titles,
         "chosen_title": chosen_title,
         "description": description,
+        "shot_list": shot_list,
         "thumbnail_brief": brief,
         "thumbnail_image_path": thumbnail_image_path,
         "thumbnail_error": thumbnail_error,

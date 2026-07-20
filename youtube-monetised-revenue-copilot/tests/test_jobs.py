@@ -30,6 +30,7 @@ def test_start_plan_job_reports_progress_and_completes(monkeypatch, tmp_path):
             "titles": ["Title One"],
             "chosen_title": "Title One",
             "description": "description text",
+            "shot_list": [{"index": 1, "start": "0:00", "end": "0:08", "chapter": "Open", "prompt": "x"}],
             "thumbnail_brief": type("B", (), {"__dict__": {"composition": "x"}})(),
             "thumbnail_image_path": None,
             "thumbnail_error": "GEMINI_API_KEY is not set.",

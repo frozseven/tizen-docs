@@ -159,6 +159,8 @@ def plan(topic: str, niche: str, length_minutes: int, out_dir: Path):
 
     console.print(f"\n[green]Done.[/] All assets in {result['video_dir']}/")
     console.print(f"Top title pick: [bold]{result['chosen_title']}[/] (see titles.md for all options)")
+    console.print(f"Video-generation shot list: {len(result['shot_list'])} clips — see video_prompts.md "
+                   "to render manually against your Google AI Pro Flow quota.")
     console.print("[yellow]Do the human edit pass before uploading — see the note at the end of script.md.[/]")
 
 

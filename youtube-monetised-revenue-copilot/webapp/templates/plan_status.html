@@ -39,6 +39,8 @@ function renderResult(r) {
   html += '<h3>Chapters</h3><ul>' + r.chapters.map(c => '<li>' + c.timestamp + ' — ' + c.label.replace(/</g,'&lt;') + '</li>').join('') + '</ul>';
   html += '<h3>Description</h3><pre>' + r.description.replace(/</g,'&lt;') + '</pre>';
   html += '<h3>Script</h3><pre>' + r.script.replace(/</g,'&lt;') + '</pre>';
+  html += '<h3>Video-generation shot list</h3><p>' + r.shot_list_count + ' clips (8s each) — see video_prompts.md for the full \
+paste-ready prompts to render manually against your Google AI Pro Flow quota.</p>';
   html += '<h3>Thumbnail brief</h3>';
   html += '<p><strong>Composition:</strong> ' + r.thumbnail_brief.composition.replace(/</g,'&lt;') + '</p>';
   html += '<p><strong>Text overlay:</strong> ' + r.thumbnail_brief.text_overlay.replace(/</g,'&lt;') + '</p>';
@@ -49,7 +51,7 @@ function renderResult(r) {
     html += '<p class="muted">Thumbnail image skipped: ' + r.thumbnail_error.replace(/</g,'&lt;') + '</p>';
   }
   html += '<h3>Files</h3><p>';
-  ['script.md','chapters.json','titles.md','description.md','thumbnail_brief.md'].forEach(f => {
+  ['script.md','chapters.json','titles.md','description.md','video_prompts.md','thumbnail_brief.md'].forEach(f => {
     html += '<a class="btn" style="margin-right:0.5rem" href="/plan/files/' + jobId + '/' + f + '">' + f + '</a>';
   });
   html += '</p></div>';

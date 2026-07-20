@@ -153,6 +153,19 @@ THUMBNAIL_STYLE_REFERENCE = (
     "secondary element. Two colors total plus background. No clutter."
 )
 
+# Same faceless/navy-gold positioning as THUMBNAIL_STYLE_REFERENCE, extended
+# to full-motion b-roll so generated video stays consistent with the
+# channel's established (and deliberately faceless) visual brand.
+VIDEO_VISUAL_STYLE = (
+    "Cinematic, photorealistic b-roll. Deep navy/blue-black environments lit "
+    "with warm gold accent light (windows, desk lamps, city lights at dusk). "
+    "Slow, deliberate camera moves (push-in, slow pan, rack focus) — no "
+    "shaky or frantic motion. Human figures, when present, are shown from "
+    "behind, in silhouette, or with faces out of frame/in shadow — never a "
+    "clear, identifiable face on screen. No on-screen text or captions "
+    "(added in post)."
+)
+
 
 def title_patterns_used(pattern_field: str) -> list[dict]:
     """Resolves a SEED_VIDEO_IDEAS `pattern` string like

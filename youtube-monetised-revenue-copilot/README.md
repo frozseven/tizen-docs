@@ -100,12 +100,16 @@ ytcopilot auth
 six-part structure and hook beats from `channel_profile.py`), derives
 timestamped chapters from it, generates title options tagged by which
 measured pattern they use, writes an SEO description with the chapters and
-brand line embedded, and produces a thumbnail design brief plus a rendered
-PNG — all via the Gemini API (`GEMINI_API_KEY` required), saved under
-`output/<topic-slug>/`. It also checks prior thumbnails under `output/` and
-tells the model what compositions/palettes to avoid repeating, and appends a
-reminder to do the human edit pass and run `ytcopilot authenticity` before
-uploading.
+brand line embedded, breaks the script into a text-to-video shot list
+(`video_prompts.md` — one paste-ready prompt per ~8-second clip, sized for
+manual rendering against a Google AI Pro Flow quota rather than an
+automated/paid API, since a full-length video's worth of API-generated clips
+costs several times a typical monthly credit budget), and produces a
+thumbnail design brief plus a rendered PNG — all via the Gemini API
+(`GEMINI_API_KEY` required), saved under `output/<topic-slug>/`. It also
+checks prior thumbnails under `output/` and tells the model what
+compositions/palettes to avoid repeating, and appends a reminder to do the
+human edit pass and run `ytcopilot authenticity` before uploading.
 
 ## Example
 
@@ -127,7 +131,7 @@ uvicorn webapp.app:app --reload
 
 Then open `http://localhost:8000`. Pages: Dashboard (config/auth status),
 Diagnose, Research, Schedule, Rollout, Ideas, Authenticity, and Plan a video
-(runs the same 5-step pipeline as `ytcopilot plan`, with live progress and
+(runs the same 6-step pipeline as `ytcopilot plan`, with live progress and
 generated assets/downloads on the page when done — it writes to the same
 `output/<topic-slug>/` folder the CLI uses).
 
