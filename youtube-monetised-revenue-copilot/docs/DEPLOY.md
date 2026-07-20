@@ -110,11 +110,25 @@ browser address bar) on both devices, pointing at the same live service.
   automatic one whenever new code is pushed to this branch) wipes local
   files. Concretely:
   - The YouTube Analytics OAuth token (`.ytcopilot_token.json`) gets
-    wiped — you'll need to hit "Connect YouTube Analytics" again
-    occasionally, not just once ever.
+    wiped on every restart. **Fix this once:** after connecting via
+    "Connect YouTube Analytics," the Dashboard shows a box with a refresh
+    token to copy into a `YOUTUBE_OAUTH_REFRESH_TOKEN` environment variable
+    on Render (Environment tab, same place as your other keys). Once that's
+    set and redeployed, restarts no longer wipe the connection — the box
+    stops appearing once it detects that variable is set.
   - Anything `ytcopilot plan` generates under `output/` on the server
     should be downloaded/saved locally right after you generate it —
     don't treat the server as permanent storage for scripts/thumbnails.
+    (No env-var workaround for this one — it's actual generated files, not
+    a small token.)
+  - Separately, Google itself expires refresh tokens after 7 days for
+    OAuth consent screens still in "Testing" publishing status — persisting
+    the token above doesn't help if this hits. Go to Google Cloud Console →
+    your project → **APIs & Services → OAuth consent screen** (or **Google
+    Auth Platform → Audience**) → **Publish app**. For a personal app only
+    you'll ever sign into, this just means a one-time "Google hasn't
+    verified this app" warning to click through on your next sign-in — not
+    an actual review process.
 - **Your API keys live on Render's servers**, not just your laptop, since
   the whole point is that it runs somewhere other than your machine. Only
   you and Render can see them (set as environment variables, not visible

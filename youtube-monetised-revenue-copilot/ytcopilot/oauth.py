@@ -22,11 +22,29 @@ def get_credentials(settings: Settings) -> Credentials:
 
     if token_path.exists():
         creds = Credentials.from_authorized_user_info(json.loads(token_path.read_text()), SCOPES)
+    elif settings.youtube_oauth_refresh_token and settings.oauth_client_id and settings.oauth_client_secret:
+        # No token file on disk (e.g. a fresh Render instance after a
+        # restart wiped it) but a refresh token was persisted as an env
+        # var — rebuild working credentials from that instead of forcing
+        # the user to reconnect. Refresh tokens don't expose an access
+        # token/expiry on their own, so this always needs one refresh call
+        # below before creds.valid is true.
+        creds = Credentials(
+            token=None,
+            refresh_token=settings.youtube_oauth_refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=settings.oauth_client_id,
+            client_secret=settings.oauth_client_secret,
+            scopes=SCOPES,
+        )
 
     if creds and creds.valid:
         return creds
 
-    if creds and creds.expired and creds.refresh_token:
+    # Not `creds.expired` (which is False when there's no access token/expiry
+    # at all yet, e.g. the refresh-token-only case above) — `not creds.valid`
+    # covers "expired" and "never had a token" the same way.
+    if creds and not creds.valid and creds.refresh_token:
         creds.refresh(Request())
         token_path.write_text(creds.to_json())
         return creds
@@ -100,4 +118,13 @@ def save_credentials(settings: Settings, creds: Credentials) -> None:
 
 
 def has_saved_credentials(settings: Settings) -> bool:
-    return settings.oauth_token_path.exists()
+    return settings.oauth_token_path.exists() or bool(settings.youtube_oauth_refresh_token)
+
+
+def get_saved_refresh_token(settings: Settings) -> str | None:
+    """The refresh token from the on-disk token file, if any — surfaced by the
+    dashboard so it can be copied into YOUTUBE_OAUTH_REFRESH_TOKEN once, to
+    survive restarts on hosts with no persistent disk."""
+    if not settings.oauth_token_path.exists():
+        return None
+    return json.loads(settings.oauth_token_path.read_text()).get("refresh_token")

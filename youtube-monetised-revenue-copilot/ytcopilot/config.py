@@ -30,6 +30,12 @@ class Settings:
     oauth_token_path: Path = field(
         default_factory=lambda: Path(os.getenv("YOUTUBE_OAUTH_TOKEN_PATH", ".ytcopilot_token.json"))
     )
+    # Optional: seeds a working token on a host with no persistent disk (e.g.
+    # Render's free tier, which wipes oauth_token_path on every restart) —
+    # see oauth.py's bootstrap-from-refresh-token path.
+    youtube_oauth_refresh_token: str | None = field(
+        default_factory=lambda: os.getenv("YOUTUBE_OAUTH_REFRESH_TOKEN")
+    )
     gemini_api_key: str | None = field(default_factory=lambda: os.getenv("GEMINI_API_KEY"))
     gemini_text_model: str = field(
         default_factory=lambda: os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash")

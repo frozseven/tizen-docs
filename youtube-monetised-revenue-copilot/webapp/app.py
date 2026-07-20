@@ -69,11 +69,18 @@ def dashboard(request: Request):
         "YouTube Analytics (OAuth)": oauth.has_saved_credentials(settings),
         "Gemini (text + thumbnail images)": bool(settings.gemini_api_key),
     }
+    # Only offer this once: show the refresh token to copy into
+    # YOUTUBE_OAUTH_REFRESH_TOKEN until that env var is actually set, then
+    # stop — no reason to keep exposing it on every dashboard load after.
+    refresh_token_to_persist = None
+    if not settings.youtube_oauth_refresh_token:
+        refresh_token_to_persist = oauth.get_saved_refresh_token(settings)
     return render(
         request, "dashboard.html", "dashboard",
         channel_name=profile.CHANNEL_NAME,
         channel_handle=profile.CHANNEL_HANDLE,
         config_status=config_status,
+        refresh_token_to_persist=refresh_token_to_persist,
         notice=request.query_params.get("notice"),
         error=request.query_params.get("error"),
     )

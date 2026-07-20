@@ -16,6 +16,20 @@
   <p class="muted">Missing keys go in your <code>.env</code> file — see <code>docs/SETUP.md</code>.</p>
 </div>
 
+{% if refresh_token_to_persist %}
+<div class="panel flag caution">
+  <h3>Make this survive restarts (one-time)</h3>
+  <p>On a host with no persistent disk (e.g. Render's free tier), this connection
+  gets wiped every time the app restarts. Copy the value below into an environment
+  variable named <code>YOUTUBE_OAUTH_REFRESH_TOKEN</code> on your host, then redeploy
+  — after that, this box won't appear again and you won't need to reconnect.</p>
+  <p><strong>Treat this like a password</strong> — anyone with it can read this
+  channel's private Analytics data. Copy it straight into your host's environment
+  variable settings, not into a chat, note, or screenshot.</p>
+  <textarea readonly onclick="this.select()" rows="2" style="width:100%; font-family: monospace;">{{ refresh_token_to_persist }}</textarea>
+</div>
+{% endif %}
+
 <div class="panel">
   <h3>What each page does</h3>
   <table>
