@@ -23,7 +23,7 @@ local RemoteEvents = require(ReplicatedStorage.Remotes.RemoteEvents)
 local GRAVITY = Vector3.new(0, -Workspace.Gravity, 0)
 local DRAG_COEFFICIENT = 0.4
 local LAUNCH_SPEED = 40
-local SHATTER_SPEED_THRESHOLD = 45 -- studs/s impact speed treated as "high G-force"
+local SHATTER_SPEED_THRESHOLD = 20 -- studs/s impact speed treated as "high G-force"
 local DEBRIS_COUNT = 6
 local DEBRIS_LIFETIME = 5
 
