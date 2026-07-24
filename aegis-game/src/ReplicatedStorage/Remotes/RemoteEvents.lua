@@ -10,15 +10,16 @@ local REMOTE_NAMES = {
 	"PlaceComponent",
 	"SaveVehicle",
 	"LoadVehicle",
+	"SpawnCargo",
 }
 
 local RemoteEvents = {}
 
 function RemoteEvents.Init()
-	local folder = ReplicatedStorage:FindFirstChild("VehicleRemotes")
+	local folder = ReplicatedStorage:FindFirstChild("GameRemotes")
 	if folder == nil then
 		folder = Instance.new("Folder")
-		folder.Name = "VehicleRemotes"
+		folder.Name = "GameRemotes"
 		folder.Parent = ReplicatedStorage
 	end
 
@@ -32,7 +33,7 @@ function RemoteEvents.Init()
 end
 
 function RemoteEvents.Get(name: string): RemoteEvent
-	local folder = ReplicatedStorage:WaitForChild("VehicleRemotes", 10)
+	local folder = ReplicatedStorage:WaitForChild("GameRemotes", 10)
 	return folder:WaitForChild(name, 10) :: RemoteEvent
 end
 
