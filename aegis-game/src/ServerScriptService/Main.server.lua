@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local RemoteEvents = require(ReplicatedStorage.Remotes.RemoteEvents)
+local LevelSetup = require(ServerScriptService.Gameplay.LevelSetup)
 local DataHandler = require(ServerScriptService.Data.DataHandler)
 local AntiCheatService = require(ServerScriptService.AntiCheat.AntiCheatService)
 local VehicleAssemblyService = require(ServerScriptService.Vehicles.VehicleAssemblyService)
@@ -12,6 +13,7 @@ local SoftPermadeathService = require(ServerScriptService.Gameplay.SoftPermadeat
 local ExtractionZoneService = require(ServerScriptService.Gameplay.ExtractionZoneService)
 
 RemoteEvents.Init()
+LevelSetup.Init()
 DataHandler.Init()
 AntiCheatService.Init()
 VehicleAssemblyService.Init()
