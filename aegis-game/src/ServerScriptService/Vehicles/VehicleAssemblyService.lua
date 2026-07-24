@@ -218,7 +218,9 @@ function VehicleAssemblyService.SpawnStarterTruck(player: Player)
 	end
 end
 
-local function onPlayerRemoving(player: Player)
+-- Destroys a player's currently-placed vehicle, if any. Used both when
+-- they leave and when soft-permadeath wipes their built infrastructure.
+function VehicleAssemblyService.DestroyVehicle(player: Player)
 	local vehicle = vehicles[player]
 	if vehicle ~= nil then
 		vehicle.Model:Destroy()
@@ -232,7 +234,7 @@ function VehicleAssemblyService.Init()
 	RemoteEvents.Get("SaveVehicle").OnServerEvent:Connect(onSaveVehicle)
 	RemoteEvents.Get("LoadVehicle").OnServerEvent:Connect(onLoadVehicle)
 
-	Players.PlayerRemoving:Connect(onPlayerRemoving)
+	Players.PlayerRemoving:Connect(VehicleAssemblyService.DestroyVehicle)
 end
 
 return VehicleAssemblyService

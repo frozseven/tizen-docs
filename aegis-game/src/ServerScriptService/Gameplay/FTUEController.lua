@@ -25,21 +25,6 @@ local function getShipyardSpawnCFrame(): CFrame
 	return FALLBACK_SPAWN
 end
 
--- DataHandler loads a profile asynchronously on join, so it may not be
--- ready yet the moment a character first spawns; wait for it rather than
--- silently skipping FTUE.
-local function waitForProfile(player: Player, timeout: number)
-	local start = os.clock()
-	while os.clock() - start < timeout do
-		local profile = DataHandler.GetProfile(player)
-		if profile ~= nil then
-			return profile
-		end
-		task.wait(0.1)
-	end
-	return nil
-end
-
 local function runFTUE(player: Player, character: Model)
 	local rootPart = character:WaitForChild("HumanoidRootPart", 5) :: BasePart?
 	if rootPart ~= nil then
@@ -51,7 +36,7 @@ local function runFTUE(player: Player, character: Model)
 end
 
 local function onCharacterAdded(player: Player, character: Model)
-	local profile = waitForProfile(player, PROFILE_WAIT_TIMEOUT)
+	local profile = DataHandler.WaitForProfile(player, PROFILE_WAIT_TIMEOUT)
 	if profile == nil then
 		return
 	end

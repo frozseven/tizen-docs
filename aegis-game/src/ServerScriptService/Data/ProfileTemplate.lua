@@ -11,6 +11,7 @@ export type ProfileData = {
 	Level: number,
 	Vehicles: { [string]: VehicleRecord },
 	HasCompletedFTUE: boolean,
+	RespawnAvailableAt: number, -- os.time() timestamp; 0 = no restriction
 }
 
 return {
@@ -18,4 +19,5 @@ return {
 	Level = 1,
 	Vehicles = {},
 	HasCompletedFTUE = false,
+	RespawnAvailableAt = 0,
 } :: ProfileData

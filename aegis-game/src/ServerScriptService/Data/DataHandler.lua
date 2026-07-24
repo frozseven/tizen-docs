@@ -57,6 +57,20 @@ function DataHandler.GetProfile(player: Player)
 	return Profiles[player]
 end
 
+-- Profile loading is asynchronous (StartSessionAsync), so it may not be
+-- ready yet the moment a character first spawns; poll instead of assuming.
+function DataHandler.WaitForProfile(player: Player, timeout: number)
+	local start = os.clock()
+	while os.clock() - start < timeout do
+		local profile = Profiles[player]
+		if profile ~= nil then
+			return profile
+		end
+		task.wait(0.1)
+	end
+	return nil
+end
+
 function DataHandler.SaveVehicle(player: Player, vehicleId: string, name: string, nodes: { VehicleNode }): boolean
 	local profile = Profiles[player]
 	if profile == nil then
