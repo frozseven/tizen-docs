@@ -186,6 +186,38 @@ local function onLoadVehicle(player: Player, vehicleId: unknown)
 	end
 end
 
+local STARTER_WHEEL_OFFSETS = {
+	Vector3.new(-4, 0, -4),
+	Vector3.new(4, 0, -4),
+	Vector3.new(-4, 0, 4),
+	Vector3.new(4, 0, 4),
+}
+local WHEEL_TYPE_ID = 2
+
+-- Server-initiated (not client-requested), for the FTUE controller: spawns
+-- a chassis and welds four wheels onto it symmetrically, bypassing the
+-- RemoteEvent path entirely since there's no player input to validate.
+function VehicleAssemblyService.SpawnStarterTruck(player: Player)
+	onSpawnChassis(player)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	for _, offset in STARTER_WHEEL_OFFSETS do
+		local relativeCFrame = CFrame.new(VehicleNodeSystem.SnapToGrid(offset))
+		local worldCFrame = vehicle.RootPart.CFrame * relativeCFrame
+		local part = createComponentPart(WHEEL_TYPE_ID, worldCFrame)
+		if part == nil then
+			continue
+		end
+		part.Parent = vehicle.Model
+		weldToRoot(vehicle.RootPart, part)
+
+		VehicleNodeSystem.AddNode(vehicle.Graph, WHEEL_TYPE_ID, relativeCFrame, part)
+	end
+end
+
 local function onPlayerRemoving(player: Player)
 	local vehicle = vehicles[player]
 	if vehicle ~= nil then

@@ -11,6 +11,7 @@ local REMOTE_NAMES = {
 	"SaveVehicle",
 	"LoadVehicle",
 	"SpawnCargo",
+	"ContractNotification",
 }
 
 local RemoteEvents = {}

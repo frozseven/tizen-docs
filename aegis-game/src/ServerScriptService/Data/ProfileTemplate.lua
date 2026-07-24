@@ -10,10 +10,12 @@ export type ProfileData = {
 	Cash: number,
 	Level: number,
 	Vehicles: { [string]: VehicleRecord },
+	HasCompletedFTUE: boolean,
 }
 
 return {
 	Cash = 0,
 	Level = 1,
 	Vehicles = {},
+	HasCompletedFTUE = false,
 } :: ProfileData
