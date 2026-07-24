@@ -27,9 +27,8 @@
       "$path": "src/StarterGui"
     },
     "Workspace": {
-      "$path": "src/Workspace",
-      "$properties": {
-        "FilteringEnabled": true
+      "Map": {
+        "$path": "src/Workspace/Map"
       }
     }
   }
