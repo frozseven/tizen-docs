@@ -23,7 +23,12 @@ and [Wally](https://wally.run/).
 
 ## Setup
 
+Requires [Rokit](https://github.com/rojo-rbx/rokit) to install the pinned
+Rojo/Wally versions from `rokit.toml`. Run all of this from the `aegis-game/`
+directory, on the machine you'll run Roblox Studio on (not a headless CI box):
+
 ```
+rokit install
 wally install
 rojo serve
 ```
