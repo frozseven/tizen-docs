@@ -37,10 +37,19 @@ type CargoState = {
 
 local activeCargo: { [BasePart]: CargoState } = {}
 
+-- Every cargo part (in flight, landed, or debris) lives in this folder so
+-- ground raycasts can exclude it - otherwise a throw could "land" on top
+-- of a previously-landed piece of cargo instead of the real floor.
+local cargoFolder: Folder = nil :: any -- assigned in Init()
+
 local VolatileCargoService = {}
 
 local function findGroundY(position: Vector3): number
-	local result = Workspace:Raycast(position, Vector3.new(0, -1000, 0))
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { cargoFolder }
+
+	local result = Workspace:Raycast(position, Vector3.new(0, -1000, 0), params)
 	if result == nil then
 		return position.Y - 1000
 	end
@@ -86,7 +95,7 @@ local function shatterCrystal(part: BasePart, impactVelocity: Vector3)
 		shard.CanCollide = true
 		shard.AssemblyLinearVelocity = impactVelocity * 0.3
 			+ Vector3.new(math.random(-10, 10), math.random(2, 10), math.random(-10, 10))
-		shard.Parent = Workspace
+		shard.Parent = cargoFolder
 
 		Debris:AddItem(shard, DEBRIS_LIFETIME)
 	end
@@ -106,7 +115,7 @@ local function spawnCargo(player: Player, kind: unknown)
 	local groundY = findGroundY(spawnCFrame.Position)
 
 	local part = createCargoPart(kind :: CargoKind, spawnCFrame)
-	part.Parent = Workspace
+	part.Parent = cargoFolder
 
 	local launchVelocity = character.PrimaryPart.CFrame.LookVector * LAUNCH_SPEED + Vector3.new(0, LAUNCH_SPEED * 0.4, 0)
 
@@ -153,6 +162,10 @@ local function stepCargo(dt: number)
 end
 
 function VolatileCargoService.Init()
+	cargoFolder = Instance.new("Folder")
+	cargoFolder.Name = "Cargo"
+	cargoFolder.Parent = Workspace
+
 	RemoteEvents.Get("SpawnCargo").OnServerEvent:Connect(spawnCargo)
 	RunService.Heartbeat:Connect(stepCargo)
 end
