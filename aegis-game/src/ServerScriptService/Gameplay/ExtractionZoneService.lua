@@ -1,7 +1,10 @@
 --!strict
--- Tracks which players are currently standing inside the extraction zone
--- (a marked "ExtractionZone" part). If a player's character dies while
--- inside, that's a soft-permadeath trigger rather than a normal respawn.
+-- Detects whether a player died inside the extraction zone (a marked
+-- "ExtractionZone" part). Checks spatial overlap directly at the moment
+-- of death rather than tracking occupancy via Touched/TouchEnded over
+-- time - the zone is non-colliding (players can walk through it), so a
+-- falling or moving character can touch and un-touch it within a single
+-- frame, making continuous occupancy tracking unreliable.
 
 local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -11,30 +14,20 @@ local SoftPermadeathService = require(ServerScriptService.Gameplay.SoftPermadeat
 
 local EXTRACTION_ZONE_NAME = "ExtractionZone"
 
-local playersInZone: { [Player]: boolean } = {}
-
 local ExtractionZoneService = {}
 
-local function getPlayerFromZoneTouch(hit: BasePart): Player?
-	local character = hit:FindFirstAncestorOfClass("Model")
-	if character == nil then
-		return nil
+local function diedInExtractionZone(character: Model): boolean
+	local zone = Workspace:FindFirstChild(EXTRACTION_ZONE_NAME)
+	if zone == nil or not zone:IsA("BasePart") then
+		return false
 	end
-	return Players:GetPlayerFromCharacter(character)
-end
 
-local function onZoneTouched(hit: BasePart)
-	local player = getPlayerFromZoneTouch(hit)
-	if player ~= nil then
-		playersInZone[player] = true
-	end
-end
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
+	overlapParams.FilterDescendantsInstances = { character }
 
-local function onZoneTouchEnded(hit: BasePart)
-	local player = getPlayerFromZoneTouch(hit)
-	if player ~= nil then
-		playersInZone[player] = nil
-	end
+	local overlapping = Workspace:GetPartBoundsInBox(zone.CFrame, zone.Size, overlapParams)
+	return #overlapping > 0
 end
 
 local function onCharacterAdded(player: Player, character: Model)
@@ -44,34 +37,28 @@ local function onCharacterAdded(player: Player, character: Model)
 	end
 
 	humanoid.Died:Connect(function()
-		if playersInZone[player] then
-			playersInZone[player] = nil
+		if diedInExtractionZone(character) then
 			SoftPermadeathService.TriggerWipe(player)
 		end
 	end)
 end
 
 local function onPlayerAdded(player: Player)
+	if player.Character ~= nil then
+		onCharacterAdded(player, player.Character)
+	end
+
 	player.CharacterAdded:Connect(function(character)
 		onCharacterAdded(player, character)
 	end)
 end
 
 function ExtractionZoneService.Init()
-	local zone = Workspace:FindFirstChild(EXTRACTION_ZONE_NAME)
-	if zone ~= nil and zone:IsA("BasePart") then
-		zone.Touched:Connect(onZoneTouched)
-		zone.TouchEnded:Connect(onZoneTouchEnded)
-	end
-
 	for _, player in Players:GetPlayers() do
 		onPlayerAdded(player)
 	end
-	Players.PlayerAdded:Connect(onPlayerAdded)
 
-	Players.PlayerRemoving:Connect(function(player)
-		playersInZone[player] = nil
-	end)
+	Players.PlayerAdded:Connect(onPlayerAdded)
 end
 
 return ExtractionZoneService
