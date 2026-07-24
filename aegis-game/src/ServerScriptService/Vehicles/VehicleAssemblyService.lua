@@ -5,9 +5,11 @@
 --
 -- Placeholder geometry (plain colored Parts) stands in for real component
 -- models; swap CreateComponentPart's Instance.new("Part") calls for real
--- assets once art exists. Chassis/components are anchored here since
--- unanchored rigid-body driving physics is a separate later task.
+-- assets once art exists. Chassis/components are unanchored real rigid
+-- bodies - the whole assembly is welded into one body, which
+-- VehicleDrivingService moves directly via a welded VehicleSeat.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -20,6 +22,8 @@ local DataHandler = require(ServerScriptService.Data.DataHandler)
 local MAX_PLACEMENT_DISTANCE = 40 -- studs from root chassis
 local MAX_COMPONENTS_PER_VEHICLE = 200
 local MAX_ID_LENGTH = 32
+local SEAT_TYPE_ID = 5
+local VEHICLE_SEAT_TAG = "VehicleSeat" -- read by VehicleDrivingService
 
 type ComponentDefinition = {
 	Name: string,
@@ -32,6 +36,7 @@ local COMPONENT_DEFINITIONS: { [number]: ComponentDefinition } = {
 	[2] = { Name = "Wheel", Size = Vector3.new(2, 2, 1), Color = Color3.fromRGB(40, 40, 40) },
 	[3] = { Name = "Motor", Size = Vector3.new(2, 2, 2), Color = Color3.fromRGB(180, 60, 40) },
 	[4] = { Name = "Suspension", Size = Vector3.new(1, 3, 1), Color = Color3.fromRGB(60, 90, 160) },
+	[SEAT_TYPE_ID] = { Name = "DriverSeat", Size = Vector3.new(2, 1, 2), Color = Color3.fromRGB(200, 200, 60) },
 }
 
 type VehicleState = {
@@ -50,7 +55,7 @@ local function createChassis(cframe: CFrame): (Model, BasePart)
 	root.Size = Vector3.new(6, 1, 10)
 	root.Color = Color3.fromRGB(200, 180, 60)
 	root.CFrame = cframe
-	root.Anchored = true
+	root.Anchored = false
 
 	local model = Instance.new("Model")
 	model.Name = "Vehicle"
@@ -66,12 +71,20 @@ local function createComponentPart(typeId: number, worldCFrame: CFrame): BasePar
 		return nil
 	end
 
-	local part = Instance.new("Part")
+	local part: BasePart
+	if typeId == SEAT_TYPE_ID then
+		local seat = Instance.new("VehicleSeat")
+		CollectionService:AddTag(seat, VEHICLE_SEAT_TAG)
+		part = seat
+	else
+		part = Instance.new("Part")
+	end
+
 	part.Name = definition.Name
 	part.Size = definition.Size
 	part.Color = definition.Color
 	part.CFrame = worldCFrame
-	part.Anchored = true
+	part.Anchored = false
 	return part
 end
 
@@ -215,6 +228,16 @@ function VehicleAssemblyService.SpawnStarterTruck(player: Player)
 		weldToRoot(vehicle.RootPart, part)
 
 		VehicleNodeSystem.AddNode(vehicle.Graph, WHEEL_TYPE_ID, relativeCFrame, part)
+	end
+
+	-- Centered driver's seat so the starter truck is drivable immediately.
+	local seatRelativeCFrame = CFrame.new(0, 1, 0)
+	local seatWorldCFrame = vehicle.RootPart.CFrame * seatRelativeCFrame
+	local seat = createComponentPart(SEAT_TYPE_ID, seatWorldCFrame)
+	if seat ~= nil then
+		seat.Parent = vehicle.Model
+		weldToRoot(vehicle.RootPart, seat)
+		VehicleNodeSystem.AddNode(vehicle.Graph, SEAT_TYPE_ID, seatRelativeCFrame, seat)
 	end
 end
 

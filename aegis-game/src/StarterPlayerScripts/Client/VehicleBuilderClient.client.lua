@@ -6,6 +6,7 @@
 --
 -- P: spawn a chassis in front of you
 -- 1-4: place StructuralFrame / Wheel / Motor / Suspension at the next grid slot
+-- 5: place a DriverSeat at the next grid slot
 -- K: save the vehicle
 -- L: load the saved vehicle
 
@@ -43,6 +44,9 @@ local KEY_ACTIONS: { [Enum.KeyCode]: () -> () } = {
 	end,
 	[Enum.KeyCode.Four] = function()
 		RemoteEvents.Get("PlaceComponent"):FireServer(4, nextOffset())
+	end,
+	[Enum.KeyCode.Five] = function()
+		RemoteEvents.Get("PlaceComponent"):FireServer(5, nextOffset())
 	end,
 	[Enum.KeyCode.K] = function()
 		RemoteEvents.Get("SaveVehicle"):FireServer(VEHICLE_ID, "My Truck")
