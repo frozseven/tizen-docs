@@ -84,6 +84,19 @@ local function step()
 			continue
 		end
 
+		if humanoid ~= nil and humanoid.SeatPart ~= nil then
+			-- Seated (e.g. driving a vehicle): the character moves
+			-- together with whatever they're seated on, which is not
+			-- on-foot movement these checks are meant for. Keep
+			-- position/state fresh so checks resume cleanly once they
+			-- get out, rather than flagging vehicle speed as a hack.
+			state.LastPosition = rootPart.Position
+			state.WasGrounded = true
+			state.AirborneSince = nil
+			state.LastCheckTime = now
+			continue
+		end
+
 		local currentPosition = rootPart.Position
 		local verticalVelocity = (currentPosition.Y - state.LastPosition.Y) / dt
 		local isGrounded = humanoid == nil or humanoid.FloorMaterial ~= Enum.Material.Air
