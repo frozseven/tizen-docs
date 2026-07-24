@@ -17,6 +17,10 @@ local MAX_TURN_RATE = math.rad(90) -- radians/s at full speed; scaled down at lo
 
 local VehicleDrivingService = {}
 
+-- TEMPORARY debug logging to diagnose driving not working; throttled to
+-- avoid flooding Output. Remove once resolved.
+local debugAccumulator = 0
+
 local function driveSeat(seat: VehicleSeat, dt: number)
 	if seat.Occupant == nil then
 		return
@@ -36,6 +40,14 @@ local function driveSeat(seat: VehicleSeat, dt: number)
 
 	local speedFraction = math.clamp(math.abs(newForwardSpeed) / MAX_SPEED, 0.2, 1)
 	seat.AssemblyAngularVelocity = Vector3.new(0, seat.Steer * MAX_TURN_RATE * speedFraction, 0)
+
+	debugAccumulator += dt
+	if debugAccumulator >= 0.5 then
+		debugAccumulator = 0
+		print(
+			`[VehicleDrivingService DEBUG] Throttle={seat.Throttle} currentForwardSpeed={currentForwardSpeed} newForwardSpeed={newForwardSpeed} AssemblyLinearVelocity={seat.AssemblyLinearVelocity} Anchored={seat.Anchored}`
+		)
+	end
 end
 
 local function step(dt: number)
