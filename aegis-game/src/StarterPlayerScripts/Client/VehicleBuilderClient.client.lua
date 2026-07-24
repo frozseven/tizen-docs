@@ -4,7 +4,8 @@
 -- this exists to exercise and demonstrate the server-authoritative
 -- assembly/save/load pipeline end to end.
 --
--- P: spawn a chassis in front of you
+-- P: spawn a bare chassis in front of you
+-- T: spawn a complete, correctly-assembled starter truck (4 wheels + seat)
 -- 1-4: place StructuralFrame / Wheel / Motor / Suspension at the next grid slot
 -- 5: place a DriverSeat at the next grid slot
 -- K: save the vehicle
@@ -31,6 +32,10 @@ end
 local KEY_ACTIONS: { [Enum.KeyCode]: () -> () } = {
 	[Enum.KeyCode.P] = function()
 		RemoteEvents.Get("SpawnChassis"):FireServer()
+		placementIndex = 0
+	end,
+	[Enum.KeyCode.T] = function()
+		RemoteEvents.Get("SpawnStarterTruck"):FireServer()
 		placementIndex = 0
 	end,
 	[Enum.KeyCode.One] = function()

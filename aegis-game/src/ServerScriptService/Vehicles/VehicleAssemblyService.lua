@@ -256,6 +256,7 @@ function VehicleAssemblyService.Init()
 	RemoteEvents.Get("PlaceComponent").OnServerEvent:Connect(onPlaceComponent)
 	RemoteEvents.Get("SaveVehicle").OnServerEvent:Connect(onSaveVehicle)
 	RemoteEvents.Get("LoadVehicle").OnServerEvent:Connect(onLoadVehicle)
+	RemoteEvents.Get("SpawnStarterTruck").OnServerEvent:Connect(VehicleAssemblyService.SpawnStarterTruck)
 
 	Players.PlayerRemoving:Connect(VehicleAssemblyService.DestroyVehicle)
 end
