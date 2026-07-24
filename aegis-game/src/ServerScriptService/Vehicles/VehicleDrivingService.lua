@@ -4,8 +4,15 @@
 -- sits in and drives it, so reading them here is safe - the server still
 -- owns how those inputs translate into actual motion. The whole
 -- assembled vehicle is one welded rigid body (see VehicleAssemblyService),
--- so driving it just means moving the seat's assembly directly; there's
--- no per-wheel suspension/torque simulation in this foundation.
+-- so driving it just means moving the seat's assembly directly.
+--
+-- Motion is applied through LinearVelocity/AngularVelocity constraints
+-- (created alongside the seat in VehicleAssemblyService) rather than
+-- writing AssemblyLinearVelocity directly - a raw property write gets
+-- fought/overridden every step by the physics solver resolving the
+-- assembly's WeldConstraints, while a constraint is a first-class part
+-- of that same solve. There's no per-wheel suspension/torque simulation
+-- in this foundation.
 
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -17,12 +24,14 @@ local MAX_TURN_RATE = math.rad(90) -- radians/s at full speed; scaled down at lo
 
 local VehicleDrivingService = {}
 
--- TEMPORARY debug logging to diagnose driving not working; throttled to
--- avoid flooding Output. Remove once resolved.
-local debugAccumulator = 0
-
 local function driveSeat(seat: VehicleSeat, dt: number)
 	if seat.Occupant == nil then
+		return
+	end
+
+	local linearVelocity = seat:FindFirstChild("DriveLinearVelocity") :: LinearVelocity?
+	local angularVelocity = seat:FindFirstChild("DriveAngularVelocity") :: AngularVelocity?
+	if linearVelocity == nil or angularVelocity == nil then
 		return
 	end
 
@@ -36,18 +45,10 @@ local function driveSeat(seat: VehicleSeat, dt: number)
 	local newForwardSpeed = currentForwardSpeed + math.clamp(speedDelta, -maxDelta, maxDelta)
 
 	local horizontal = forward * newForwardSpeed
-	seat.AssemblyLinearVelocity = Vector3.new(horizontal.X, currentVelocity.Y, horizontal.Z)
+	linearVelocity.VectorVelocity = Vector3.new(horizontal.X, currentVelocity.Y, horizontal.Z)
 
 	local speedFraction = math.clamp(math.abs(newForwardSpeed) / MAX_SPEED, 0.2, 1)
-	seat.AssemblyAngularVelocity = Vector3.new(0, seat.Steer * MAX_TURN_RATE * speedFraction, 0)
-
-	debugAccumulator += dt
-	if debugAccumulator >= 0.5 then
-		debugAccumulator = 0
-		print(
-			`[VehicleDrivingService DEBUG] Throttle={seat.Throttle} currentForwardSpeed={currentForwardSpeed} newForwardSpeed={newForwardSpeed} AssemblyLinearVelocity={seat.AssemblyLinearVelocity} Anchored={seat.Anchored}`
-		)
-	end
+	angularVelocity.AngularVelocity = Vector3.new(0, seat.Steer * MAX_TURN_RATE * speedFraction, 0)
 end
 
 local function step(dt: number)

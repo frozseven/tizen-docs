@@ -74,16 +74,37 @@ local function createComponentPart(typeId: number, worldCFrame: CFrame): BasePar
 	local part: BasePart
 	if typeId == SEAT_TYPE_ID then
 		local seat = Instance.new("VehicleSeat")
-		-- VehicleSeat has its own built-in force-based driving physics
-		-- (governed by MaxSpeed/Torque/TurnSpeed), separate from and
-		-- competing with VehicleDrivingService's own velocity control.
-		-- Explicitly zeroed so the engine's own mechanism applies no
-		-- force at all - VehicleDrivingService gets uncontested, direct
-		-- control over the assembly's velocity instead of fighting it.
+		-- VehicleSeat's own built-in force-based driving physics
+		-- (MaxSpeed/Torque/TurnSpeed) is disabled - VehicleDrivingService
+		-- drives it instead, through LinearVelocity/AngularVelocity
+		-- constraints (created below) rather than raw AssemblyLinearVelocity
+		-- writes, which get fought/overridden by the physics solver
+		-- resolving the assembly's WeldConstraints each step.
 		seat.MaxSpeed = 0
 		seat.Torque = 0
 		seat.TurnSpeed = 0
 		CollectionService:AddTag(seat, VEHICLE_SEAT_TAG)
+
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "DriveAttachment"
+		attachment.Parent = seat
+
+		local linearVelocity = Instance.new("LinearVelocity")
+		linearVelocity.Name = "DriveLinearVelocity"
+		linearVelocity.Attachment0 = attachment
+		linearVelocity.MaxForce = math.huge
+		linearVelocity.VectorVelocity = Vector3.zero
+		linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+		linearVelocity.Parent = seat
+
+		local angularVelocity = Instance.new("AngularVelocity")
+		angularVelocity.Name = "DriveAngularVelocity"
+		angularVelocity.Attachment0 = attachment
+		angularVelocity.MaxTorque = math.huge
+		angularVelocity.AngularVelocity = Vector3.zero
+		angularVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+		angularVelocity.Parent = seat
+
 		part = seat
 	else
 		part = Instance.new("Part")
