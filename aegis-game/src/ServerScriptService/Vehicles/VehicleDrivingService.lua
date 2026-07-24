@@ -44,8 +44,9 @@ local function driveSeat(seat: VehicleSeat, dt: number)
 	local maxDelta = ACCELERATION * dt
 	local newForwardSpeed = currentForwardSpeed + math.clamp(speedDelta, -maxDelta, maxDelta)
 
-	local horizontal = forward * newForwardSpeed
-	linearVelocity.VectorVelocity = Vector3.new(horizontal.X, currentVelocity.Y, horizontal.Z)
+	-- Y is left at 0 here: the constraint has zero force on world Y (see
+	-- VehicleAssemblyService), so this component is never actually applied.
+	linearVelocity.VectorVelocity = forward * newForwardSpeed
 
 	local speedFraction = math.clamp(math.abs(newForwardSpeed) / MAX_SPEED, 0.2, 1)
 	angularVelocity.AngularVelocity = Vector3.new(0, seat.Steer * MAX_TURN_RATE * speedFraction, 0)

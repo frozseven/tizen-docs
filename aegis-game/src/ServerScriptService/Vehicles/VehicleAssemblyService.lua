@@ -92,7 +92,10 @@ local function createComponentPart(typeId: number, worldCFrame: CFrame): BasePar
 		local linearVelocity = Instance.new("LinearVelocity")
 		linearVelocity.Name = "DriveLinearVelocity"
 		linearVelocity.Attachment0 = attachment
-		linearVelocity.MaxForce = math.huge
+		-- Per-axis, with zero force on world Y: this constraint only ever
+		-- drives horizontal motion and never fights gravity/landing.
+		linearVelocity.ForceLimitMode = Enum.ForceLimitMode.PerAxis
+		linearVelocity.MaxAxesForce = Vector3.new(math.huge, 0, math.huge)
 		linearVelocity.VectorVelocity = Vector3.zero
 		linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
 		linearVelocity.Parent = seat
