@@ -74,15 +74,15 @@ local function createComponentPart(typeId: number, worldCFrame: CFrame): BasePar
 	local part: BasePart
 	if typeId == SEAT_TYPE_ID then
 		local seat = Instance.new("VehicleSeat")
-		-- VehicleSeat has its own built-in engine-level driving physics
-		-- (governed by these three), separate from and in addition to
-		-- VehicleDrivingService's own velocity control. Defaults are
-		-- near-zero, which fights our script down to a crawl; set high so
-		-- the engine's own behavior doesn't constrain us below our own
-		-- MAX_SPEED/turn rate.
-		seat.MaxSpeed = 200
-		seat.Torque = 50
-		seat.TurnSpeed = 20
+		-- VehicleSeat has its own built-in force-based driving physics
+		-- (governed by MaxSpeed/Torque/TurnSpeed), separate from and
+		-- competing with VehicleDrivingService's own velocity control.
+		-- Explicitly zeroed so the engine's own mechanism applies no
+		-- force at all - VehicleDrivingService gets uncontested, direct
+		-- control over the assembly's velocity instead of fighting it.
+		seat.MaxSpeed = 0
+		seat.Torque = 0
+		seat.TurnSpeed = 0
 		CollectionService:AddTag(seat, VEHICLE_SEAT_TAG)
 		part = seat
 	else
