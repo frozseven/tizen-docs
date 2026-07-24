@@ -7,4 +7,4 @@ realm = "shared"
 [dependencies]
 
 [server-dependencies]
-ProfileStore = "madstudioroblox/profilestore@^0.4"
+ProfileStore = "lm-loleris/profilestore@^1.0.3"
