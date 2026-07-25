@@ -29,7 +29,6 @@ local FIRE_COOLDOWN = 0.5 -- seconds between shots per player
 type ProjectileState = {
 	Part: BasePart,
 	Velocity: Vector3,
-	Shooter: Player,
 	SpawnTime: number,
 	RaycastParams: RaycastParams,
 }
@@ -54,7 +53,7 @@ local function createProjectilePart(cframe: CFrame): BasePart
 	return part
 end
 
-local function applyHit(hitPart: BasePart, shooter: Player)
+local function applyHit(hitPart: BasePart)
 	local character = hitPart:FindFirstAncestorOfClass("Model")
 	if character == nil then
 		return
@@ -65,10 +64,11 @@ local function applyHit(hitPart: BasePart, shooter: Player)
 		return
 	end
 
-	local victim = Players:GetPlayerFromCharacter(character)
-	if victim == shooter then
-		return -- guards a respawn mid-flight; the spawn-time filter below
-		-- already excludes the shooter's character at fire time
+	-- No friendly fire: this is a co-op game, not PvP. Excludes every real
+	-- player, not just the shooter - only raiders/dummies (Humanoids with no
+	-- associated Player) take projectile damage.
+	if Players:GetPlayerFromCharacter(character) ~= nil then
+		return
 	end
 
 	humanoid:TakeDamage(DAMAGE)
@@ -110,7 +110,6 @@ local function onFireProjectile(player: Player, aimDirection: unknown)
 	table.insert(activeProjectiles, {
 		Part = part,
 		Velocity = direction * LAUNCH_SPEED,
-		Shooter = player,
 		SpawnTime = now,
 		RaycastParams = raycastParams,
 	})
@@ -138,7 +137,7 @@ local function step(dt: number)
 
 		local result = Workspace:Raycast(previousPosition, newPosition - previousPosition, state.RaycastParams)
 		if result ~= nil then
-			applyHit(result.Instance, state.Shooter)
+			applyHit(result.Instance)
 			destroyProjectile(index)
 			continue
 		end
