@@ -1,0 +1,372 @@
+--!strict
+-- Server-authoritative vehicle assembly: spawns a chassis, validates and
+-- welds components onto it at grid-snapped offsets, and bridges the live
+-- node graph to ProfileStore via SOSDF for save/load.
+--
+-- Placeholder geometry (plain colored Parts) stands in for real component
+-- models; swap CreateComponentPart's Instance.new("Part") calls for real
+-- assets once art exists. Chassis/components are unanchored real rigid
+-- bodies - the whole assembly is welded into one body, which
+-- VehicleDrivingService moves directly via a welded VehicleSeat.
+
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
+
+local RemoteEvents = require(ReplicatedStorage.Remotes.RemoteEvents)
+local VehicleNodeSystem = require(script.Parent.VehicleNodeSystem)
+local DataHandler = require(ServerScriptService.Data.DataHandler)
+
+local MAX_PLACEMENT_DISTANCE = 40 -- studs from root chassis
+local MAX_COMPONENTS_PER_VEHICLE = 200
+local MAX_ID_LENGTH = 32
+local SEAT_TYPE_ID = 5
+local VEHICLE_SEAT_TAG = "VehicleSeat" -- read by VehicleDrivingService
+local VEHICLE_ROOT_TAG = "VehicleRoot" -- read by VehicleBuilderClient to find each player's own chassis
+
+type ComponentDefinition = {
+	Name: string,
+	Size: Vector3,
+	Color: Color3,
+}
+
+local COMPONENT_DEFINITIONS: { [number]: ComponentDefinition } = {
+	[1] = { Name = "StructuralFrame", Size = Vector3.new(4, 1, 4), Color = Color3.fromRGB(120, 120, 130) },
+	[2] = { Name = "Wheel", Size = Vector3.new(2, 2, 1), Color = Color3.fromRGB(40, 40, 40) },
+	[3] = { Name = "Motor", Size = Vector3.new(2, 2, 2), Color = Color3.fromRGB(180, 60, 40) },
+	[4] = { Name = "Suspension", Size = Vector3.new(1, 3, 1), Color = Color3.fromRGB(60, 90, 160) },
+	[SEAT_TYPE_ID] = { Name = "DriverSeat", Size = Vector3.new(2, 1, 2), Color = Color3.fromRGB(200, 200, 60) },
+}
+
+type VehicleState = {
+	RootPart: BasePart,
+	Model: Model,
+	Graph: VehicleNodeSystem.Graph,
+}
+
+local vehicles: { [Player]: VehicleState } = {}
+
+local VehicleAssemblyService = {}
+
+local function createChassis(cframe: CFrame): (Model, BasePart)
+	local root = Instance.new("Part")
+	root.Name = "ChassisRoot"
+	root.Size = Vector3.new(6, 1, 10)
+	root.Color = Color3.fromRGB(200, 180, 60)
+	root.CFrame = cframe
+	root.Anchored = false
+
+	local model = Instance.new("Model")
+	model.Name = "Vehicle"
+	root.Parent = model
+	model.PrimaryPart = root
+
+	return model, root
+end
+
+local function createComponentPart(typeId: number, worldCFrame: CFrame): BasePart?
+	local definition = COMPONENT_DEFINITIONS[typeId]
+	if definition == nil then
+		return nil
+	end
+
+	local part: BasePart
+	if typeId == SEAT_TYPE_ID then
+		local seat = Instance.new("VehicleSeat")
+		-- VehicleSeat's own built-in force-based driving physics is
+		-- disabled via Torque/TurnSpeed = 0 - VehicleDrivingService drives
+		-- it instead, through LinearVelocity/AngularVelocity constraints
+		-- (created below) rather than raw AssemblyLinearVelocity writes,
+		-- which get fought/overridden by the physics solver resolving the
+		-- assembly's WeldConstraints each step. MaxSpeed is left nonzero
+		-- (matching VehicleDrivingService's own MAX_SPEED) purely so the
+		-- default Speed gauge HUD has a real denominator to divide by -
+		-- with Torque at 0 it contributes no actual driving force.
+		seat.MaxSpeed = 60
+		seat.Torque = 0
+		seat.TurnSpeed = 0
+		CollectionService:AddTag(seat, VEHICLE_SEAT_TAG)
+
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "DriveAttachment"
+		attachment.Parent = seat
+
+		local linearVelocity = Instance.new("LinearVelocity")
+		linearVelocity.Name = "DriveLinearVelocity"
+		linearVelocity.Attachment0 = attachment
+		-- Per-axis, with zero force on world Y: this constraint only ever
+		-- drives horizontal motion and never fights gravity/landing.
+		linearVelocity.ForceLimitMode = Enum.ForceLimitMode.PerAxis
+		linearVelocity.MaxAxesForce = Vector3.new(math.huge, 0, math.huge)
+		linearVelocity.VectorVelocity = Vector3.zero
+		linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+		linearVelocity.Parent = seat
+
+		local angularVelocity = Instance.new("AngularVelocity")
+		angularVelocity.Name = "DriveAngularVelocity"
+		angularVelocity.Attachment0 = attachment
+		angularVelocity.MaxTorque = math.huge
+		angularVelocity.AngularVelocity = Vector3.zero
+		angularVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+		angularVelocity.Parent = seat
+
+		part = seat
+	else
+		part = Instance.new("Part")
+	end
+
+	part.Name = definition.Name
+	part.Size = definition.Size
+	part.Color = definition.Color
+	part.CFrame = worldCFrame
+	part.Anchored = false
+	return part
+end
+
+local function weldToRoot(root: BasePart, part: BasePart)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = root
+	weld.Part1 = part
+	weld.Parent = part
+end
+
+local GROUND_RAYCAST_UP_OFFSET = 50 -- studs above the candidate spawn point to raycast down from
+
+-- "+3 studs above your feet" is only a guess at floor level, not a
+-- guarantee - it breaks whenever the player's own elevation at spawn time
+-- doesn't match true ground height (uneven terrain, standing on other
+-- geometry, etc.), leaving the whole welded assembly resting at the wrong
+-- height, sometimes visibly floating. Mirrors VolatileCargoService's own
+-- ground detection.
+local function findGroundY(position: Vector3, excludeInstances: { Instance }): number?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = excludeInstances
+
+	local origin = Vector3.new(position.X, position.Y + GROUND_RAYCAST_UP_OFFSET, position.Z)
+	local result = Workspace:Raycast(origin, Vector3.new(0, -1000, 0), params)
+	if result == nil then
+		return nil
+	end
+	return result.Position.Y
+end
+
+local function onSpawnChassis(player: Player)
+	local existing = vehicles[player]
+	if existing ~= nil then
+		existing.Model:Destroy()
+	end
+
+	local character = player.Character
+	local spawnCFrame = if character ~= nil and character.PrimaryPart ~= nil
+		then character.PrimaryPart.CFrame * CFrame.new(0, 3, -10)
+		else CFrame.new(0, 5, 0)
+
+	local model, root = createChassis(spawnCFrame)
+
+	local groundY = findGroundY(root.Position, if character ~= nil then { character } else {})
+	if groundY ~= nil then
+		root.CFrame = CFrame.new(root.Position.X, groundY + root.Size.Y / 2, root.Position.Z) * root.CFrame.Rotation
+	end
+
+	model.Name = `Vehicle_{player.UserId}`
+	root:SetAttribute("OwnerUserId", player.UserId)
+	CollectionService:AddTag(root, VEHICLE_ROOT_TAG)
+	model.Parent = Workspace
+
+	vehicles[player] = {
+		RootPart = root,
+		Model = model,
+		Graph = VehicleNodeSystem.new(),
+	}
+end
+
+local function onPlaceComponent(player: Player, typeId: unknown, offset: unknown)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	if typeof(typeId) ~= "number" or COMPONENT_DEFINITIONS[typeId] == nil then
+		return
+	end
+
+	if typeof(offset) ~= "Vector3" or (offset :: Vector3).Magnitude > MAX_PLACEMENT_DISTANCE then
+		return
+	end
+
+	if vehicle.Graph.NextUID > MAX_COMPONENTS_PER_VEHICLE then
+		return
+	end
+
+	local snappedOffset = VehicleNodeSystem.SnapToGrid(offset :: Vector3)
+	local relativeCFrame = CFrame.new(snappedOffset)
+
+	if VehicleNodeSystem.IsOccupied(vehicle.Graph, relativeCFrame) then
+		return
+	end
+
+	local worldCFrame = vehicle.RootPart.CFrame * relativeCFrame
+	local part = createComponentPart(typeId, worldCFrame)
+	if part == nil then
+		return
+	end
+	part.Parent = vehicle.Model
+	weldToRoot(vehicle.RootPart, part)
+
+	VehicleNodeSystem.AddNode(vehicle.Graph, typeId, relativeCFrame, part)
+end
+
+-- Removes whichever component (if any) occupies the same grid cell as
+-- offset - the same targeting PlaceComponent uses, so aiming at an existing
+-- part and firing this instead of PlaceComponent removes it.
+local function onRemoveComponent(player: Player, offset: unknown)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	if typeof(offset) ~= "Vector3" or (offset :: Vector3).Magnitude > MAX_PLACEMENT_DISTANCE then
+		return
+	end
+
+	local snappedOffset = VehicleNodeSystem.SnapToGrid(offset :: Vector3)
+	local relativeCFrame = CFrame.new(snappedOffset)
+
+	local uid = VehicleNodeSystem.FindNodeAt(vehicle.Graph, relativeCFrame)
+	if uid == nil then
+		return
+	end
+
+	local node = vehicle.Graph.Nodes[uid]
+	VehicleNodeSystem.RemoveNode(vehicle.Graph, uid)
+
+	if node.Instance ~= nil then
+		node.Instance:Destroy()
+	end
+end
+
+local function isValidId(value: unknown): boolean
+	return typeof(value) == "string" and #(value :: string) > 0 and #(value :: string) <= MAX_ID_LENGTH
+end
+
+local function onSaveVehicle(player: Player, vehicleId: unknown, name: unknown)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	if not isValidId(vehicleId) or not isValidId(name) then
+		return
+	end
+
+	local nodes = VehicleNodeSystem.Serialize(vehicle.Graph)
+	DataHandler.SaveVehicle(player, vehicleId :: string, name :: string, nodes)
+end
+
+local function onLoadVehicle(player: Player, vehicleId: unknown)
+	if not isValidId(vehicleId) then
+		return
+	end
+
+	local nodes = DataHandler.LoadVehicle(player, vehicleId :: string)
+	if nodes == nil then
+		return
+	end
+
+	onSpawnChassis(player)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	for _, node in nodes do
+		local worldCFrame = vehicle.RootPart.CFrame * node.CFrame
+		local part = createComponentPart(node.TypeId, worldCFrame)
+		if part == nil then
+			continue
+		end
+		part.Parent = vehicle.Model
+		weldToRoot(vehicle.RootPart, part)
+
+		VehicleNodeSystem.AddNode(vehicle.Graph, node.TypeId, node.CFrame, part)
+	end
+end
+
+local STARTER_WHEEL_OFFSETS = {
+	Vector3.new(-4, 0, -4),
+	Vector3.new(4, 0, -4),
+	Vector3.new(-4, 0, 4),
+	Vector3.new(4, 0, 4),
+}
+local WHEEL_TYPE_ID = 2
+
+-- Server-initiated (not client-requested), for the FTUE controller: spawns
+-- a chassis and welds four wheels onto it symmetrically, bypassing the
+-- RemoteEvent path entirely since there's no player input to validate.
+function VehicleAssemblyService.SpawnStarterTruck(player: Player)
+	onSpawnChassis(player)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	for _, offset in STARTER_WHEEL_OFFSETS do
+		local relativeCFrame = CFrame.new(VehicleNodeSystem.SnapToGrid(offset))
+		local worldCFrame = vehicle.RootPart.CFrame * relativeCFrame
+		local part = createComponentPart(WHEEL_TYPE_ID, worldCFrame)
+		if part == nil then
+			continue
+		end
+		part.Parent = vehicle.Model
+		weldToRoot(vehicle.RootPart, part)
+
+		VehicleNodeSystem.AddNode(vehicle.Graph, WHEEL_TYPE_ID, relativeCFrame, part)
+	end
+
+	-- Centered driver's seat so the starter truck is drivable immediately.
+	local seatRelativeCFrame = CFrame.new(0, 1, 0)
+	local seatWorldCFrame = vehicle.RootPart.CFrame * seatRelativeCFrame
+	local seat = createComponentPart(SEAT_TYPE_ID, seatWorldCFrame)
+	if seat ~= nil then
+		seat.Parent = vehicle.Model
+		weldToRoot(vehicle.RootPart, seat)
+		VehicleNodeSystem.AddNode(vehicle.Graph, SEAT_TYPE_ID, seatRelativeCFrame, seat)
+	end
+end
+
+-- The player's currently-placed vehicle Model, if any. Used by
+-- ContractService to check whether the vehicle (not just the player) has
+-- reached a delivery dropoff.
+function VehicleAssemblyService.GetVehicleModel(player: Player): Model?
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return nil
+	end
+	return vehicle.Model
+end
+
+-- Destroys a player's currently-placed vehicle, if any. Used both when
+-- they leave and when soft-permadeath wipes their built infrastructure.
+function VehicleAssemblyService.DestroyVehicle(player: Player)
+	local vehicle = vehicles[player]
+	if vehicle ~= nil then
+		vehicle.Model:Destroy()
+		vehicles[player] = nil
+	end
+end
+
+function VehicleAssemblyService.Init()
+	RemoteEvents.Get("SpawnChassis").OnServerEvent:Connect(onSpawnChassis)
+	RemoteEvents.Get("PlaceComponent").OnServerEvent:Connect(onPlaceComponent)
+	RemoteEvents.Get("RemoveComponent").OnServerEvent:Connect(onRemoveComponent)
+	RemoteEvents.Get("SaveVehicle").OnServerEvent:Connect(onSaveVehicle)
+	RemoteEvents.Get("LoadVehicle").OnServerEvent:Connect(onLoadVehicle)
+	RemoteEvents.Get("SpawnStarterTruck").OnServerEvent:Connect(VehicleAssemblyService.SpawnStarterTruck)
+
+	Players.PlayerRemoving:Connect(VehicleAssemblyService.DestroyVehicle)
+end
+
+return VehicleAssemblyService
