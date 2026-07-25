@@ -48,8 +48,10 @@ local function driveSeat(seat: VehicleSeat, dt: number)
 	-- VehicleAssemblyService), so this component is never actually applied.
 	linearVelocity.VectorVelocity = forward * newForwardSpeed
 
+	-- Negated: a positive rotation about world +Y turns LookVector toward
+	-- -X (left), but positive Steer means the player pressed right.
 	local speedFraction = math.clamp(math.abs(newForwardSpeed) / MAX_SPEED, 0.2, 1)
-	angularVelocity.AngularVelocity = Vector3.new(0, seat.Steer * MAX_TURN_RATE * speedFraction, 0)
+	angularVelocity.AngularVelocity = Vector3.new(0, -seat.Steer * MAX_TURN_RATE * speedFraction, 0)
 end
 
 local function step(dt: number)
