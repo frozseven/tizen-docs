@@ -132,6 +132,27 @@ local function weldToRoot(root: BasePart, part: BasePart)
 	weld.Parent = part
 end
 
+local GROUND_RAYCAST_UP_OFFSET = 50 -- studs above the candidate spawn point to raycast down from
+
+-- "+3 studs above your feet" is only a guess at floor level, not a
+-- guarantee - it breaks whenever the player's own elevation at spawn time
+-- doesn't match true ground height (uneven terrain, standing on other
+-- geometry, etc.), leaving the whole welded assembly resting at the wrong
+-- height, sometimes visibly floating. Mirrors VolatileCargoService's own
+-- ground detection.
+local function findGroundY(position: Vector3, excludeInstances: { Instance }): number?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = excludeInstances
+
+	local origin = Vector3.new(position.X, position.Y + GROUND_RAYCAST_UP_OFFSET, position.Z)
+	local result = Workspace:Raycast(origin, Vector3.new(0, -1000, 0), params)
+	if result == nil then
+		return nil
+	end
+	return result.Position.Y
+end
+
 local function onSpawnChassis(player: Player)
 	local existing = vehicles[player]
 	if existing ~= nil then
@@ -144,6 +165,12 @@ local function onSpawnChassis(player: Player)
 		else CFrame.new(0, 5, 0)
 
 	local model, root = createChassis(spawnCFrame)
+
+	local groundY = findGroundY(root.Position, if character ~= nil then { character } else {})
+	if groundY ~= nil then
+		root.CFrame = CFrame.new(root.Position.X, groundY + root.Size.Y / 2, root.Position.Z) * root.CFrame.Rotation
+	end
+
 	model.Name = `Vehicle_{player.UserId}`
 	root:SetAttribute("OwnerUserId", player.UserId)
 	CollectionService:AddTag(root, VEHICLE_ROOT_TAG)

@@ -25,13 +25,19 @@ local MAX_TURN_RATE = math.rad(90) -- radians/s at full speed; scaled down at lo
 local VehicleDrivingService = {}
 
 local function driveSeat(seat: VehicleSeat, dt: number)
-	if seat.Occupant == nil then
-		return
-	end
-
 	local linearVelocity = seat:FindFirstChild("DriveLinearVelocity") :: LinearVelocity?
 	local angularVelocity = seat:FindFirstChild("DriveAngularVelocity") :: AngularVelocity?
 	if linearVelocity == nil or angularVelocity == nil then
+		return
+	end
+
+	if seat.Occupant == nil then
+		-- No driver: don't keep applying whatever throttle/steer was last
+		-- commanded - otherwise an abandoned vehicle keeps crawling under
+		-- its last input forever instead of coming to rest, since nothing
+		-- else ever clears these constraints.
+		linearVelocity.VectorVelocity = Vector3.zero
+		angularVelocity.AngularVelocity = Vector3.zero
 		return
 	end
 
