@@ -24,13 +24,17 @@ local function spawnDummy(player: Player)
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local spawnCFrame = if rootPart ~= nil then rootPart.CFrame * CFrame.new(0, 0, -15) else CFrame.new(0, 5, -15)
 
-	local existing = Workspace:FindFirstChild("TestDummy")
+	-- Scoped per-player: a shared "TestDummy" name would let one player's Y
+	-- press destroy another player's dummy mid-test.
+	local dummyName = `TestDummy_{player.UserId}`
+
+	local existing = Workspace:FindFirstChild(dummyName)
 	if existing ~= nil then
 		existing:Destroy()
 	end
 
 	local dummy = Instance.new("Model")
-	dummy.Name = "TestDummy"
+	dummy.Name = dummyName
 
 	local dummyRoot = Instance.new("Part")
 	dummyRoot.Name = "HumanoidRootPart"
