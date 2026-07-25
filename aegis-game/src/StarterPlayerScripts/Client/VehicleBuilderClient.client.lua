@@ -102,7 +102,7 @@ end
 local function updateStatusLabel()
 	local definition = COMPONENT_DEFINITIONS[selectedTypeId]
 	local name = if definition ~= nil then definition.Name else "?"
-	statusLabel.Text = `Build Mode: ON | Placing: {name} (1-5) | Layer: {buildHeight} (Q/E) | Click to place, R to remove`
+	statusLabel.Text = `Build Mode: ON | Placing: {name} (1-5) | Layer: {buildHeight} (Q/E) | Click to place, R to remove (orange = existing part)`
 end
 
 local function setBuildMode(active: boolean)
@@ -129,6 +129,24 @@ end
 
 local function snapToGrid(value: number): number
 	return math.round(value / GRID_SIZE) * GRID_SIZE
+end
+
+local OCCUPIED_COLOR = Color3.fromRGB(255, 140, 40) -- distinct from the "too far" red - this cell has a real part R would remove
+
+-- Client-side mirror of the server's occupancy check (VehicleNodeSystem.
+-- FindNodeAt): every placed component is a real, visible Part welded
+-- directly under the vehicle Model, so occupancy can be read straight off
+-- the world instead of needing a dedicated remote just for this preview.
+local function findComponentAt(vehicleModel: Instance, root: BasePart, worldPosition: Vector3): BasePart?
+	for _, child in vehicleModel:GetChildren() do
+		if child == root or not child:IsA("BasePart") then
+			continue
+		end
+		if (child.Position - worldPosition).Magnitude < GRID_SIZE * 0.5 then
+			return child
+		end
+	end
+	return nil
 end
 
 local function updateGhost()
@@ -159,6 +177,21 @@ local function updateGhost()
 	local snappedOffset = Vector3.new(snapToGrid(localPoint.X), buildHeight, snapToGrid(localPoint.Z))
 	currentOffset = snappedOffset
 
+	local worldCFrame = root.CFrame * CFrame.new(snappedOffset)
+	local occupant = if root.Parent ~= nil then findComponentAt(root.Parent, root, worldCFrame.Position) else nil
+
+	if occupant ~= nil then
+		-- Highlight the actual existing part, not the currently-selected
+		-- placement shape - so it's obvious exactly what R would remove,
+		-- even if that's a different component type than the one you have
+		-- selected to place.
+		ghost.Size = occupant.Size
+		ghost.CFrame = occupant.CFrame
+		ghost.Color = OCCUPIED_COLOR
+		ghost.Parent = Workspace
+		return
+	end
+
 	local definition = COMPONENT_DEFINITIONS[selectedTypeId]
 	if definition == nil then
 		ghost.Parent = nil
@@ -166,7 +199,7 @@ local function updateGhost()
 	end
 
 	ghost.Size = definition.Size
-	ghost.CFrame = root.CFrame * CFrame.new(snappedOffset)
+	ghost.CFrame = worldCFrame
 	ghost.Color = if snappedOffset.Magnitude <= MAX_PLACEMENT_DISTANCE
 		then definition.Color
 		else Color3.fromRGB(200, 60, 60)
