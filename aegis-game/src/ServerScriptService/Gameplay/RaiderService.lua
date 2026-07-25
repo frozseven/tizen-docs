@@ -11,8 +11,11 @@
 -- ProjectileService's existing hit logic with no changes needed there.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+
+local HealthBar = require(ReplicatedStorage.Shared.Modules.HealthBar)
 
 local SPAWN_POSITION = CFrame.new(10, 1, 15) -- near ExtractionZone
 local MAX_RAIDERS = 2
@@ -85,6 +88,8 @@ local function spawnRaider()
 
 	model.PrimaryPart = root
 	model.Parent = Workspace
+
+	HealthBar.Attach(humanoid, torso)
 
 	local lastMeleeTime = 0
 	local lastMoveTickTime = 0

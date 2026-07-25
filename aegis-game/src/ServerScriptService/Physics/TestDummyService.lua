@@ -12,39 +12,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local HealthBar = require(ReplicatedStorage.Shared.Modules.HealthBar)
 local RemoteEvents = require(ReplicatedStorage.Remotes.RemoteEvents)
 
 local DEATH_CLEANUP_DELAY = 2 -- seconds the corpse stays visible after dying
 
 local TestDummyService = {}
-
-local function addHealthBar(humanoid: Humanoid, anchor: BasePart)
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "HealthBillboard"
-	billboard.Size = UDim2.new(4, 0, 0.6, 0)
-	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-	billboard.AlwaysOnTop = true
-	billboard.Parent = anchor
-
-	local background = Instance.new("Frame")
-	background.Size = UDim2.new(1, 0, 1, 0)
-	background.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	background.BorderSizePixel = 0
-	background.Parent = billboard
-
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.Size = UDim2.new(1, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(60, 200, 90)
-	fill.BorderSizePixel = 0
-	fill.Parent = background
-
-	humanoid.HealthChanged:Connect(function(health)
-		local fraction = math.clamp(health / humanoid.MaxHealth, 0, 1)
-		fill.Size = UDim2.new(fraction, 0, 1, 0)
-		fill.BackgroundColor3 = Color3.fromRGB(60, 200, 90):Lerp(Color3.fromRGB(200, 60, 60), 1 - fraction)
-	end)
-end
 
 local function spawnDummy(player: Player)
 	local character = player.Character
@@ -82,7 +55,7 @@ local function spawnDummy(player: Player)
 	humanoid.Health = 100
 	humanoid.Parent = dummy
 
-	addHealthBar(humanoid, torso)
+	HealthBar.Attach(humanoid, torso)
 
 	local isDead = false
 	humanoid.Died:Connect(function()
