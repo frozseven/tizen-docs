@@ -21,6 +21,7 @@ type PlayerState = {
 	LastCheckTime: number,
 	WasGrounded: boolean,
 	AirborneSince: number?,
+	WasSeated: boolean,
 }
 
 local playerStates: { [Player]: PlayerState } = {}
@@ -53,6 +54,7 @@ local function trackCharacter(player: Player, character: Model)
 		LastCheckTime = os.clock(),
 		WasGrounded = true,
 		AirborneSince = nil,
+		WasSeated = false,
 	}
 end
 
@@ -87,13 +89,26 @@ local function step()
 		if humanoid ~= nil and humanoid.SeatPart ~= nil then
 			-- Seated (e.g. driving a vehicle): the character moves
 			-- together with whatever they're seated on, which is not
-			-- on-foot movement these checks are meant for. Keep
-			-- position/state fresh so checks resume cleanly once they
-			-- get out, rather than flagging vehicle speed as a hack.
+			-- on-foot movement these checks are meant for.
 			state.LastPosition = rootPart.Position
 			state.WasGrounded = true
 			state.AirborneSince = nil
 			state.LastCheckTime = now
+			state.WasSeated = true
+			continue
+		end
+
+		if state.WasSeated then
+			-- First sample after getting out of a seat: LastPosition still
+			-- reflects wherever the vehicle last was, so comparing against
+			-- it here would read the vehicle's own speed (routinely above
+			-- MAX_WALK_SPEED_STUDS_PER_SECOND) as a player speed/teleport
+			-- hack. Resync instead of checking this one sample.
+			state.LastPosition = rootPart.Position
+			state.WasGrounded = humanoid == nil or humanoid.FloorMaterial ~= Enum.Material.Air
+			state.AirborneSince = nil
+			state.LastCheckTime = now
+			state.WasSeated = false
 			continue
 		end
 
