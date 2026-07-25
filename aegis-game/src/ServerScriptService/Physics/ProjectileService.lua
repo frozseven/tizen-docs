@@ -74,7 +74,7 @@ local function applyHit(hitPart: BasePart, shooter: Player)
 	humanoid:TakeDamage(DAMAGE)
 end
 
-local function onFireProjectile(player: Player)
+local function onFireProjectile(player: Player, aimDirection: unknown)
 	local now = os.clock()
 	local last = lastFireTime[player] or 0
 	if now - last < FIRE_COOLDOWN then
@@ -88,7 +88,19 @@ local function onFireProjectile(player: Player)
 		return
 	end
 
-	local spawnCFrame = rootPart.CFrame * CFrame.new(0, 1, -3)
+	-- Prefer the client-reported camera aim direction (where the player is
+	-- actually looking) over the character's body-facing LookVector: in
+	-- third-person, the body doesn't turn to match the camera unless the
+	-- player is also moving, so firing along LookVector made shots miss
+	-- whatever the player was visually aiming at. The client input is
+	-- untrusted, so it's validated and re-normalized here rather than used
+	-- as-is - a malformed or non-unit vector just falls back to LookVector.
+	local direction = rootPart.CFrame.LookVector
+	if typeof(aimDirection) == "Vector3" and aimDirection.Magnitude > 0.01 then
+		direction = aimDirection.Unit
+	end
+
+	local spawnCFrame = CFrame.lookAt(rootPart.Position + Vector3.new(0, 1, 0), rootPart.Position + Vector3.new(0, 1, 0) + direction)
 	local part = createProjectilePart(spawnCFrame)
 
 	local raycastParams = RaycastParams.new()
@@ -97,7 +109,7 @@ local function onFireProjectile(player: Player)
 
 	table.insert(activeProjectiles, {
 		Part = part,
-		Velocity = rootPart.CFrame.LookVector * LAUNCH_SPEED,
+		Velocity = direction * LAUNCH_SPEED,
 		Shooter = player,
 		SpawnTime = now,
 		RaycastParams = raycastParams,
