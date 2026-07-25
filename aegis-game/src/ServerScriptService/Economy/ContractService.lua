@@ -81,6 +81,7 @@ local function completeContract(player: Player, contract: Contract)
 	local profile = DataHandler.GetProfile(player)
 	if profile ~= nil then
 		profile.Data.Cash += contract.Reward
+		DataHandler.SyncLeaderstats(player)
 	end
 
 	notifyPlayer(player, "Contract Complete", `+{contract.Reward} cash`)

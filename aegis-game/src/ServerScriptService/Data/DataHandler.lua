@@ -18,6 +18,28 @@ local Profiles: { [Player]: typeof(PlayerStore:StartSessionAsync(...)) } = {}
 
 local DataHandler = {}
 
+-- leaderstats is a Roblox convention (a "leaderstats" Folder of Value
+-- instances under the Player) that both auto-populates the default player
+-- list and gives clients an easy, already-replicated way to read Cash/Level
+-- without a dedicated RemoteEvent - PlayerHUD reads these directly.
+local function createLeaderstats(player: Player, profile): Folder
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+
+	local cash = Instance.new("IntValue")
+	cash.Name = "Cash"
+	cash.Value = profile.Data.Cash
+	cash.Parent = leaderstats
+
+	local level = Instance.new("IntValue")
+	level.Name = "Level"
+	level.Value = profile.Data.Level
+	level.Parent = leaderstats
+
+	leaderstats.Parent = player
+	return leaderstats
+end
+
 local function onPlayerAdded(player: Player)
 	local profile = PlayerStore:StartSessionAsync(`{player.UserId}`, {
 		Cancel = function()
@@ -44,6 +66,7 @@ local function onPlayerAdded(player: Player)
 	end
 
 	Profiles[player] = profile
+	createLeaderstats(player, profile)
 end
 
 local function onPlayerRemoving(player: Player)
@@ -83,6 +106,29 @@ function DataHandler.SaveVehicle(player: Player, vehicleId: string, name: string
 	}
 
 	return true
+end
+
+-- Call after any change to profile.Data.Cash/Level (contract payout, soft-
+-- permadeath wipe, etc.) so the client-visible leaderstats stay in sync.
+function DataHandler.SyncLeaderstats(player: Player)
+	local profile = Profiles[player]
+	if profile == nil then
+		return
+	end
+
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if leaderstats == nil then
+		return
+	end
+
+	local cash = leaderstats:FindFirstChild("Cash") :: IntValue?
+	local level = leaderstats:FindFirstChild("Level") :: IntValue?
+	if cash ~= nil then
+		cash.Value = profile.Data.Cash
+	end
+	if level ~= nil then
+		level.Value = profile.Data.Level
+	end
 end
 
 function DataHandler.LoadVehicle(player: Player, vehicleId: string): { VehicleNode }?
