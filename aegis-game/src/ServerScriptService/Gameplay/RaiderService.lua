@@ -24,6 +24,7 @@ local MELEE_INTERVAL = 1 -- seconds between melee hits
 local MOVE_TICK_INTERVAL = 0.5 -- seconds between chase-target updates
 local RAIDER_HEALTH = 60
 local DEATH_CLEANUP_DELAY = 2
+local HIT_STAGGER_DURATION = 0.4 -- seconds a raider freezes in place after taking damage
 
 local RaiderService = {}
 
@@ -87,6 +88,19 @@ local function spawnRaider()
 
 	local lastMeleeTime = 0
 	local lastMoveTickTime = 0
+	local staggerUntil = 0
+	local lastHealth = humanoid.Health
+
+	humanoid.HealthChanged:Connect(function(newHealth)
+		-- A hit should give the player breathing room, not just tick down a
+		-- number while the raider keeps closing distance at full speed -
+		-- freeze it in place briefly so shooting actually buys space.
+		if newHealth < lastHealth then
+			staggerUntil = os.clock() + HIT_STAGGER_DURATION
+			humanoid:MoveTo(root.Position)
+		end
+		lastHealth = newHealth
+	end)
 
 	local heartbeatConnection: RBXScriptConnection
 	heartbeatConnection = RunService.Heartbeat:Connect(function()
@@ -95,6 +109,9 @@ local function spawnRaider()
 		end
 
 		local now = os.clock()
+		if now < staggerUntil then
+			return
+		end
 		if now - lastMoveTickTime < MOVE_TICK_INTERVAL then
 			return
 		end
