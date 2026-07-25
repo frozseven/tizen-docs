@@ -50,14 +50,26 @@ function VehicleNodeSystem.AddNode(graph: Graph, typeId: number, relativeCFrame:
 	return uid
 end
 
-function VehicleNodeSystem.IsOccupied(graph: Graph, relativeCFrame: CFrame): boolean
+-- Finds whichever node (if any) occupies the same grid cell as
+-- relativeCFrame, using the same tolerance IsOccupied checks against - so
+-- removal always targets exactly the node that would have blocked a new
+-- placement there.
+function VehicleNodeSystem.FindNodeAt(graph: Graph, relativeCFrame: CFrame): number?
 	local targetPosition = relativeCFrame.Position
-	for _, node in graph.Nodes do
+	for uid, node in graph.Nodes do
 		if (node.CFrame.Position - targetPosition).Magnitude < GRID_SIZE * 0.5 then
-			return true
+			return uid
 		end
 	end
-	return false
+	return nil
+end
+
+function VehicleNodeSystem.IsOccupied(graph: Graph, relativeCFrame: CFrame): boolean
+	return VehicleNodeSystem.FindNodeAt(graph, relativeCFrame) ~= nil
+end
+
+function VehicleNodeSystem.RemoveNode(graph: Graph, uid: number)
+	graph.Nodes[uid] = nil
 end
 
 function VehicleNodeSystem.Serialize(graph: Graph): { SerializedNode }

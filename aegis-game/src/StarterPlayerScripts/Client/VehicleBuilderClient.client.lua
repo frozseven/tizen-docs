@@ -17,6 +17,7 @@
 -- 5: select DriverSeat to place
 -- Q / E: lower / raise the build layer by one grid step
 -- Left Click (while Build Mode is on): place the selected component
+-- R (while Build Mode is on): remove whatever component is under the ghost
 -- K: save the vehicle
 -- L: load the saved vehicle
 -- C: request a new delivery contract
@@ -101,7 +102,7 @@ end
 local function updateStatusLabel()
 	local definition = COMPONENT_DEFINITIONS[selectedTypeId]
 	local name = if definition ~= nil then definition.Name else "?"
-	statusLabel.Text = `Build Mode: ON | Placing: {name} (1-5) | Layer: {buildHeight} (Q/E) | Click to place`
+	statusLabel.Text = `Build Mode: ON | Placing: {name} (1-5) | Layer: {buildHeight} (Q/E) | Click to place, R to remove`
 end
 
 local function setBuildMode(active: boolean)
@@ -179,6 +180,13 @@ local function placeSelected()
 	RemoteEvents.Get("PlaceComponent"):FireServer(selectedTypeId, currentOffset)
 end
 
+local function removeAimedComponent()
+	if not buildModeActive or currentOffset == nil then
+		return
+	end
+	RemoteEvents.Get("RemoveComponent"):FireServer(currentOffset)
+end
+
 local SELECT_KEYS: { [Enum.KeyCode]: number } = {
 	[Enum.KeyCode.One] = 1,
 	[Enum.KeyCode.Two] = 2,
@@ -218,6 +226,7 @@ local OTHER_ACTIONS: { [Enum.KeyCode]: () -> () } = {
 	[Enum.KeyCode.C] = function()
 		RemoteEvents.Get("RequestContract"):FireServer()
 	end,
+	[Enum.KeyCode.R] = removeAimedComponent,
 }
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)

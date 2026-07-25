@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local REMOTE_NAMES = {
 	"SpawnChassis",
 	"PlaceComponent",
+	"RemoveComponent",
 	"SaveVehicle",
 	"LoadVehicle",
 	"SpawnCargo",

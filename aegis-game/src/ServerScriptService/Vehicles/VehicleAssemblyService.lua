@@ -219,6 +219,35 @@ local function onPlaceComponent(player: Player, typeId: unknown, offset: unknown
 	VehicleNodeSystem.AddNode(vehicle.Graph, typeId, relativeCFrame, part)
 end
 
+-- Removes whichever component (if any) occupies the same grid cell as
+-- offset - the same targeting PlaceComponent uses, so aiming at an existing
+-- part and firing this instead of PlaceComponent removes it.
+local function onRemoveComponent(player: Player, offset: unknown)
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return
+	end
+
+	if typeof(offset) ~= "Vector3" or (offset :: Vector3).Magnitude > MAX_PLACEMENT_DISTANCE then
+		return
+	end
+
+	local snappedOffset = VehicleNodeSystem.SnapToGrid(offset :: Vector3)
+	local relativeCFrame = CFrame.new(snappedOffset)
+
+	local uid = VehicleNodeSystem.FindNodeAt(vehicle.Graph, relativeCFrame)
+	if uid == nil then
+		return
+	end
+
+	local node = vehicle.Graph.Nodes[uid]
+	VehicleNodeSystem.RemoveNode(vehicle.Graph, uid)
+
+	if node.Instance ~= nil then
+		node.Instance:Destroy()
+	end
+end
+
 local function isValidId(value: unknown): boolean
 	return typeof(value) == "string" and #(value :: string) > 0 and #(value :: string) <= MAX_ID_LENGTH
 end
@@ -332,6 +361,7 @@ end
 function VehicleAssemblyService.Init()
 	RemoteEvents.Get("SpawnChassis").OnServerEvent:Connect(onSpawnChassis)
 	RemoteEvents.Get("PlaceComponent").OnServerEvent:Connect(onPlaceComponent)
+	RemoteEvents.Get("RemoveComponent").OnServerEvent:Connect(onRemoveComponent)
 	RemoteEvents.Get("SaveVehicle").OnServerEvent:Connect(onSaveVehicle)
 	RemoteEvents.Get("LoadVehicle").OnServerEvent:Connect(onLoadVehicle)
 	RemoteEvents.Get("SpawnStarterTruck").OnServerEvent:Connect(VehicleAssemblyService.SpawnStarterTruck)
