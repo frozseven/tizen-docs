@@ -34,7 +34,10 @@ local RAIDER_SPAWNS: { RaiderSpawn } = {
 }
 
 local RESPAWN_DELAY = 10 -- seconds after a raider dies before a replacement spawns
-local AGGRO_RADIUS = 40 -- studs
+-- Kept smaller than the distance from ShipyardSpawn (0,0.5,0) to the
+-- nearest raider post (~18 studs) so raiders stay guarding the extraction
+-- zone instead of chasing players all the way back to their own spawn.
+local AGGRO_RADIUS = 15 -- studs
 local MOVE_TICK_INTERVAL = 0.5 -- seconds between chase-target updates
 local DEATH_CLEANUP_DELAY = 2
 local HIT_STAGGER_DURATION = 0.4 -- seconds a raider freezes in place after taking damage
