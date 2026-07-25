@@ -32,7 +32,7 @@ local function runFTUE(player: Player, character: Model)
 	end
 
 	VehicleAssemblyService.SpawnStarterTruck(player)
-	ContractService.AssignRiverCampContract(player)
+	ContractService.AssignNextContract(player)
 end
 
 local function onCharacterAdded(player: Player, character: Model)

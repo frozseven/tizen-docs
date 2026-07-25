@@ -274,6 +274,17 @@ function VehicleAssemblyService.SpawnStarterTruck(player: Player)
 	end
 end
 
+-- The player's currently-placed vehicle Model, if any. Used by
+-- ContractService to check whether the vehicle (not just the player) has
+-- reached a delivery dropoff.
+function VehicleAssemblyService.GetVehicleModel(player: Player): Model?
+	local vehicle = vehicles[player]
+	if vehicle == nil then
+		return nil
+	end
+	return vehicle.Model
+end
+
 -- Destroys a player's currently-placed vehicle, if any. Used both when
 -- they leave and when soft-permadeath wipes their built infrastructure.
 function VehicleAssemblyService.DestroyVehicle(player: Player)
