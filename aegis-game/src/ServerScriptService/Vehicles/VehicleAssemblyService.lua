@@ -24,6 +24,7 @@ local MAX_COMPONENTS_PER_VEHICLE = 200
 local MAX_ID_LENGTH = 32
 local SEAT_TYPE_ID = 5
 local VEHICLE_SEAT_TAG = "VehicleSeat" -- read by VehicleDrivingService
+local VEHICLE_ROOT_TAG = "VehicleRoot" -- read by VehicleBuilderClient to find each player's own chassis
 
 type ComponentDefinition = {
 	Name: string,
@@ -143,6 +144,9 @@ local function onSpawnChassis(player: Player)
 		else CFrame.new(0, 5, 0)
 
 	local model, root = createChassis(spawnCFrame)
+	model.Name = `Vehicle_{player.UserId}`
+	root:SetAttribute("OwnerUserId", player.UserId)
+	CollectionService:AddTag(root, VEHICLE_ROOT_TAG)
 	model.Parent = Workspace
 
 	vehicles[player] = {
