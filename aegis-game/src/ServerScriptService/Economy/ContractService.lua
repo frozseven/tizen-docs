@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 
 local RemoteEvents = require(ReplicatedStorage.Remotes.RemoteEvents)
 local DataHandler = require(ServerScriptService.Data.DataHandler)
+local ProgressionService = require(ServerScriptService.Economy.ProgressionService)
 local VehicleAssemblyService = require(ServerScriptService.Vehicles.VehicleAssemblyService)
 
 local CHECK_INTERVAL = 1 -- seconds between dropoff checks per player
@@ -81,8 +82,10 @@ local function completeContract(player: Player, contract: Contract)
 	local profile = DataHandler.GetProfile(player)
 	if profile ~= nil then
 		profile.Data.Cash += contract.Reward
-		DataHandler.SyncLeaderstats(player)
 	end
+
+	-- AddXP re-syncs leaderstats afterward, covering the Cash change above too.
+	ProgressionService.AddXP(player, contract.Reward)
 
 	notifyPlayer(player, "Contract Complete", `+{contract.Reward} cash`)
 

@@ -26,6 +26,7 @@ function SoftPermadeathService.TriggerWipe(player: Player)
 
 	profile.Data.Cash = 0
 	profile.Data.Level = 1
+	profile.Data.XP = 0
 	profile.Data.Vehicles = {}
 	profile.Data.HasCompletedFTUE = false
 	profile.Data.RespawnAvailableAt = os.time() + TIMEOUT_SECONDS

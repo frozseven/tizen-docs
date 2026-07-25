@@ -9,6 +9,7 @@ export type VehicleRecord = {
 export type ProfileData = {
 	Cash: number,
 	Level: number,
+	XP: number, -- progress toward the next level; see ProgressionService
 	Vehicles: { [string]: VehicleRecord },
 	HasCompletedFTUE: boolean,
 	RespawnAvailableAt: number, -- os.time() timestamp; 0 = no restriction
@@ -17,6 +18,7 @@ export type ProfileData = {
 return {
 	Cash = 0,
 	Level = 1,
+	XP = 0,
 	Vehicles = {},
 	HasCompletedFTUE = false,
 	RespawnAvailableAt = 0,
