@@ -10,6 +10,7 @@
 -- 5: place a DriverSeat at the next grid slot
 -- K: save the vehicle
 -- L: load the saved vehicle
+-- C: request a new delivery contract
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -58,6 +59,9 @@ local KEY_ACTIONS: { [Enum.KeyCode]: () -> () } = {
 	end,
 	[Enum.KeyCode.L] = function()
 		RemoteEvents.Get("LoadVehicle"):FireServer(VEHICLE_ID)
+	end,
+	[Enum.KeyCode.C] = function()
+		RemoteEvents.Get("RequestContract"):FireServer()
 	end,
 }
 

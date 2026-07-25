@@ -129,6 +129,12 @@ end
 function ContractService.Init()
 	RunService.Heartbeat:Connect(step)
 
+	-- Test shortcut so contracts can be exercised without going through
+	-- the full FTUE/soft-permadeath cycle just to get a new one assigned.
+	RemoteEvents.Get("RequestContract").OnServerEvent:Connect(function(player: Player)
+		ContractService.AssignNextContract(player)
+	end)
+
 	Players.PlayerRemoving:Connect(function(player)
 		activeContracts[player] = nil
 		lastCheckTime[player] = nil
