@@ -74,13 +74,16 @@ local function createComponentPart(typeId: number, worldCFrame: CFrame): BasePar
 	local part: BasePart
 	if typeId == SEAT_TYPE_ID then
 		local seat = Instance.new("VehicleSeat")
-		-- VehicleSeat's own built-in force-based driving physics
-		-- (MaxSpeed/Torque/TurnSpeed) is disabled - VehicleDrivingService
-		-- drives it instead, through LinearVelocity/AngularVelocity
-		-- constraints (created below) rather than raw AssemblyLinearVelocity
-		-- writes, which get fought/overridden by the physics solver
-		-- resolving the assembly's WeldConstraints each step.
-		seat.MaxSpeed = 0
+		-- VehicleSeat's own built-in force-based driving physics is
+		-- disabled via Torque/TurnSpeed = 0 - VehicleDrivingService drives
+		-- it instead, through LinearVelocity/AngularVelocity constraints
+		-- (created below) rather than raw AssemblyLinearVelocity writes,
+		-- which get fought/overridden by the physics solver resolving the
+		-- assembly's WeldConstraints each step. MaxSpeed is left nonzero
+		-- (matching VehicleDrivingService's own MAX_SPEED) purely so the
+		-- default Speed gauge HUD has a real denominator to divide by -
+		-- with Torque at 0 it contributes no actual driving force.
+		seat.MaxSpeed = 60
 		seat.Torque = 0
 		seat.TurnSpeed = 0
 		CollectionService:AddTag(seat, VEHICLE_SEAT_TAG)
